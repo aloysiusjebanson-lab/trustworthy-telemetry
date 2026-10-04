@@ -1,0 +1,31 @@
+# Private commercialization research must never enter a public paper repository.
+09_confidential_commercial/
+
+# Research data that may contain sensitive or licensed material.
+05_data/raw/
+05_data/external/
+
+# Cryptographic Private Keys (CRITICAL: Never commit private keys to version control)
+*_private_key.pem
+*private_key*.pem
+*.key
+src/device_simulator/keys/
+
+# Python & Environment Artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+src/device_simulator/venv/
+.venv/
+
+# Attack Test Fixtures & Temporary outputs
+bundle_attack_*/
+bundle_insider_*/
+bundle_biochar_*/
+/observations.ndjson
+*.tmp
+.DS_Store

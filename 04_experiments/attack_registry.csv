@@ -1,0 +1,12 @@
+attack_id,family,name,mutation,target,expected_A,expected_B,expected_C,detection_rule,status
+SRC-01,source,reading modification,Change a signed numeric reading,observation,not_detected,detected,detected,signature or integrity check fails,draft
+SRC-02,source,replay,Duplicate a previously valid observation,stream,not_detected,detected_or_flagged,detected_or_flagged,duplicate sequence is reported,draft
+SRC-03,source,identity substitution,Replace declared device identity,identity,not_detected,detected,detected,signature identity policy fails,draft
+STR-01,stream_storage,deletion,Remove selected records,stream,not_detected,partial,detected_or_disclosed,sequence gap or completeness change is reported,draft
+STR-02,stream_storage,reordering,Swap record order,stream,not_detected,detected_or_flagged,detected_or_flagged,nonmonotonic sequence is reported,draft
+STR-03,stream_storage,stored alteration,Modify persisted observation,storage,not_detected,detected,detected,signature or hash fails,draft
+PRO-01,processing,parameter substitution,Change aggregation parameter,transformation,not_detected,not_detected,detected,declared transformation metadata or output hash fails,draft
+PRO-02,processing,code substitution,Replace calculation implementation,transformation,not_detected,not_detected,detected,code identity or output hash fails,draft
+SUS-01,sustainability_input,emission factor substitution,Replace factor file or metadata,reference_data,not_detected,not_detected,detected,reference input hash fails,draft
+SUS-02,sustainability_input,bundle modification,Modify claim or evidence after creation,bundle,not_detected,not_detected,detected,manifest or recomputation fails,draft
+
