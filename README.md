@@ -1,25 +1,27 @@
 # Verifiable Telemetry (v1.2)
 
-> **Open-Source Cryptographic dMRV & Hardware Root-of-Trust for High-Durability Carbon Removals (EU CRCF) and Statutory Energy Accounting**
+> **Open-Source Hardware Root-of-Trust & Local-First Cryptographic Provenance for Industrial Climate Telemetry (EU CRCF & CSRD)**
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Dependencies](https://img.shields.io/badge/Dependencies-Zero_Pip_Deps-success.svg)]()
+[![Hardware RoT](https://img.shields.io/badge/Hardware_RoT-Microchip_ATECC608-blueviolet.svg)]()
 [![Platform](https://img.shields.io/badge/Platform-macOS_%7C_Linux_%7C_POSIX-lightgrey.svg)]()
-[![Cryptography](https://img.shields.io/badge/Crypto-NIST_P--256_%7C_SHA--256-orange.svg)]()
+[![Cryptography](https://img.shields.io/badge/Crypto-NIST_P--256_%7C_SHA--256_%7C_RFC_8785-orange.svg)]()
 [![Tests](https://img.shields.io/badge/Adversarial_Tests-25%2F25_Caught-brightgreen.svg)]()
+[![Standards](https://img.shields.io/badge/Standards-EU_CRCF_%7C_CSRD_%7C_W3C_PROV--O-informational.svg)]()
 
 ---
 
 ## Executive Summary
 
-High-durability Carbon Dioxide Removal (CDR) and corporate ESG disclosures currently rest on a fragile foundation: **unauthenticated database queries, exported CSVs, and manual spreadsheets**. 
+Today, physical telemetry (industrial IoT) lacks an open, trustworthy internet architecture. Millions of edge sensors are funneled into proprietary cloud silos ("dark stacks"), unauthenticated SQL databases, and manual spreadsheets where operational telemetry can be silently altered, trimmed, or falsified before audit.
 
-In high-durability carbon removal—such as industrial biochar pyrolysis certified under the **EU Carbon Removal Certification Framework (CRCF, Delegated Regulation (EU) 2026/285)**, **Puro.earth CORCs**, and the **European Biochar Certificate (EBC)**—each metric ton of permanent carbon removed commands \$100–\$200 in direct market cash. Yet validation and verification bodies (VVBs) must audit annual claims against easily manipulated spreadsheets, uncalibrated scale printouts, and unverified kiln logs. Without cryptographic binding, fraud vectors such as **water spraying (moisture inflation)**, **kiln thermal undercooking ($T < 500^\circ\text{C}$)**, **uncertified feedstock substitution**, and **period truncation** remain trivially undetectable.
+Nowhere is this trust crisis more acute than in high-durability carbon removals—such as industrial biochar pyrolysis certified under the **EU Carbon Removal Certification Framework (CRCF, Delegated Regulation (EU) 2026/285)**, **Puro.earth CORCs**, and the **European Biochar Certificate (EBC)**—and corporate ESG accounting (**CSRD Directive 2022/2464**). In durable carbon removal, each metric ton of permanent carbon removed commands **\$100–\$200 in direct market cash**. Yet validation and verification bodies (VVBs) must audit annual claims against easily manipulated spreadsheets, uncalibrated scale printouts, and unverified kiln logs. Without cryptographic binding, fraud vectors such as **water spraying (moisture inflation)**, **kiln thermal undercooking ($T < 500^\circ\text{C}$)**, **uncertified feedstock substitution**, and **period truncation** remain trivially undetectable.
 
-**Verifiable Telemetry** bridges this trust gap by establishing an unbroken, mathematically auditable chain of custody from physical sensor tapping (RS-485 Modbus RTU Type-K thermocouples and EU 2014/31/EU NAWI legal scales) to statutory net removal claims.
+**Verifiable Telemetry** restacks the physical-to-internet trust boundary with an open-source, local-first engine. A hardened edge gateway captures raw physical sensor telemetry (RS-485 Modbus RTU Type-K thermocouples and EU 2014/31/EU NAWI legal scales) directly at the wire, signing readings inside hardware secure elements (Microchip ATECC608 in Silicon Slot 0) into an unbroken cryptographic hash-chain. Self-contained W3C PROV-O evidence bundles allow independent auditors to verify physical origin, thermal permanence, mass conservation, and net removals **100% offline with zero cloud vendor lock-in**.
 
 ### Modular Dual-Profile Architecture
-1. **Primary Profile (`biochar_pyrolysis`):** High-durability carbon removal under EU CRCF, Puro.earth, and EBC. Binds continuous Type-K thermocouple logs ($T \ge 500^\circ\text{C}$), legal-for-trade scale indicators (EU 2014/31/EU NAWI), accredited ISO 17025 lab reports ($C_{\text{org}}$ and moisture), physical mass-balance invariants, and net tonnes $\text{CO}_2$ sequestered.
+1. **Primary Profile (`biochar_pyrolysis`):** High-durability carbon removal under EU CRCF, Puro.earth, and EBC. Binds continuous Type-K thermocouple logs ($T \ge 500^\circ\text{C}$), legal-for-trade scale indicators (EU 2014/31/EU NAWI), accredited ISO 17025 lab reports ($C_{\text{org}}$, moisture, $^{14}\text{C}$), physical mass-balance invariants, and net tonnes $\text{CO}_2$ sequestered.
 2. **Secondary Profile (`energy_submetering`):** Industrial electrical submetering under CSRD (Directive 2022/2464) and EPBD. Binds MID Class B electricity meters, dual-register deltas (integer cumulative Wh vs interval Wh), and pinned ISPRA grid emission factors.
 
 ### The Trust Boundary Philosophy
@@ -510,10 +512,10 @@ python3 src/verifier/verify_bundle.py \
 
 ## Roadmap & Milestones (NLnet Restack)
 
-- [x] **Milestone 1:** Formal Data Specification & Dual Hardware Attestation Model (v1.2 Complete)
-- [x] **Milestone 2:** End-to-End Edge Simulator, Claim Pipeline & Offline Verifier (v1.2 Complete)
-- [ ] **Milestone 3:** Formal Rust Verifier Rewrite & Cross-Language Determinism Testing
-- [ ] **Milestone 4:** Operational Field Pilot in a Commercial Biochar Pyrolysis Facility
+- [x] **Milestone 1:** Specification Freeze, Canonical RFC 8785 Schemas & Adversarial Threat Model (v1.2 Complete in local prototype)
+- [ ] **Milestone 2:** Hardware Root-of-Trust & Isolated Edge Ingestion Gateway (ATECC608 I2C driver & isolated RS-485 reader daemon)
+- [ ] **Milestone 3:** Zero-Dependency Offline Verifier Engine & Cross-Language Determinism (Rust verifier binary & air-gapped CLI)
+- [ ] **Milestone 4:** Reference Hardware Testbench, Adversarial Benchmark & Public Release (Physical bench, open-hardware wiring guides & Apache 2.0 release)
 
 ---
 
