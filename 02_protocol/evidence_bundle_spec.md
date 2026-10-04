@@ -183,6 +183,45 @@ To prevent cheap, drifting scale substitution, the Device Certificate cryptograp
 }
 ```
 
+### 3.6 Reference Data Schemas (ISO 17025 Laboratory Assays & Biomass Manifests)
+
+Authoritative reference datasets in `reference_data/` bridge the gap between digital telemetry and physical chemistry:
+
+#### 1. Laboratory Assay (`reference_data/lab_analysis.json`)
+Accredited under DIN EN ISO/IEC 17025:2018 to chemically prove permanence and biogenic origin:
+```json
+{
+  "lab_name": "Eurofins Environmental Testing / EBC Accredited",
+  "lab_accreditation": "ISO_17025",
+  "sample_batch_ref": "batch_2026_10_001_to_batch_2026_10_005",
+  "moisture_bps": 1500,
+  "c_org_bps": 8200,
+  "h_c_org_ratio": 0.35,
+  "permanence_factor_bps": 8500,
+  "c14_fraction_modern_carbon_bps": 10000,
+  "heavy_metals_pass": true,
+  "analysis_date": "2026-10-02"
+}
+```
+* `c_org_bps`: Organic carbon percentage ($8200\text{ bps} = 82.00\%$).
+* `moisture_bps`: Moisture content for dry mass discounting ($1500\text{ bps} = 15.00\%$).
+* `h_c_org_ratio`: Organic hydrogen-to-carbon molar ratio ($\le 0.70$ legally required by EU CRCF).
+* `c14_fraction_modern_carbon_bps`: Radiocarbon isotopic analysis ($10000\text{ bps} = 100.00\%$ modern biogenic carbon; $0\%$ fossil coal).
+* `heavy_metals_pass`: ICP-MS assay proving absence of toxic CCA preservatives ($<10\text{ mg/kg}$ As, $<50\text{ mg/kg}$ Cu, $<1\text{ mg/kg}$ Cd).
+
+#### 2. Feedstock Delivery Manifest (`reference_data/feedstock_manifest.json`)
+Certifies biogenic origin and sets the mass conservation ceiling:
+```json
+{
+  "dataset_id": "delivery_fsc_wood_2026_09",
+  "supplier": "Dolomiti Biomass Cooperative",
+  "ebc_positive_list_code": "EBC-1.1-FOREST",
+  "fsc_certificate": "FSC-C012345",
+  "delivered_mass_total_g": 40000000,
+  "delivery_date": "2026-09-28"
+}
+```
+
 ---
 
 ## 4. Secondary Profile: Industrial Energy Submetering (`energy_submetering`)
