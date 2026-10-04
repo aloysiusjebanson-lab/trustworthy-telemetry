@@ -29,69 +29,80 @@ In high-durability carbon removal—such as industrial biochar pyrolysis certifi
 
 ## 3-Layer Security Architecture
 
-### System Architecture & Data Flow
+### System Architecture & Data Flow (Biochar Pyrolysis dMRV)
 
 ```mermaid
 flowchart TD
-    subgraph S1["1. Physical Edge & Hardware Root-of-Trust"]
-        METER["Physical Meter\n(Carlo Gavazzi EM24, MID Class B)"]
-        MODBUS["RS-485 Modbus RTU\n(Running cumulative_wh + interval_wh)"]
-        GATEWAY["Hardened Edge Gateway\n(Microchip ATECC608 Silicon)"]
-        SILICON_KEY["Device Private Key\n(Locked in Silicon Slot 0)"]
-        FACT_CA["Microchip Factory CA\n(Hardware Attestation Cert)"]
-        HASH_CHAIN["Sequential Hash-Chain\n(prev_hash = SHA256 of prior reading)"]
-        SIGNED_OBS["Signed Observations\n(NIST P-256 ECDSA + Integer Wh)"]
+    subgraph S1["1. Physical Edge & Hardware Root-of-Trust (Safe-Zone PLC Cabinet)"]
+        KILN["Continuous Rotary Pyrolysis Kiln\n(Biomass Pyrolysis Reactor)"]
+        TC["Type-K Thermocouple Transmitter\n(RS-485 Modbus RTU | T >= 500°C)"]
+        SCALE["Legal-for-Trade Scale Indicator\n(EU Directive 2014/31/EU NAWI Class III)"]
+        
+        GATEWAY["Hardened Edge Gateway\n(2.5 kV Galvanically Isolated RS-485)"]
+        ATECC["Microchip ATECC608 Secure Element\n(Private Key locked in Silicon Slot 0)"]
+        HASH_CHAIN["Sequential Hash-Chain\n(prev_hash = SHA-256 of prior batch)"]
+        BATCH_OBS["Signed Batch Observations\n(NIST P-256 ECDSA + Integer Grams)"]
 
-        METER -->|Electrical telemetry| MODBUS
-        MODBUS -->|Read registers| GATEWAY
-        FACT_CA -.->|Silicon provenance| GATEWAY
-        GATEWAY -->|Derives next hash| HASH_CHAIN
-        GATEWAY -->|Signs via| SILICON_KEY
-        SILICON_KEY --> SIGNED_OBS
-        HASH_CHAIN --> SIGNED_OBS
+        KILN -->|Thermal telemetry| TC
+        KILN -->|Biochar output weight| SCALE
+        TC -->|Modbus RTU loop| GATEWAY
+        SCALE -->|Certified weight stream| GATEWAY
+        ATECC -.->|Hardware root-of-trust| GATEWAY
+        GATEWAY -->|Chains batch digest| HASH_CHAIN
+        GATEWAY -->|Signs via ATECC608| BATCH_OBS
+        HASH_CHAIN --> BATCH_OBS
     end
 
-    subgraph S2["2. Pipeline & Evidence Packaging"]
-        INGEST["Lineage Ingestion Engine"]
-        ROOT_KEY["Company Root Private Key\n(did:web / eIDAS Seal)"]
-        DEV_CERT["Device Certificate\n(Signed Device PubKey + MID Pedigree)"]
-        PROV["W3C PROV-O Graph\n(Entity & Activity Digests)"]
-        RECIPES["Transformation Recipes\n(Energy Aggregation + Scope 2 GHG)"]
-        MANIFEST["Canonical manifest.json\n(SHA-256 File Hash Inventory)"]
-        BUNDLE_SEAL["Company Bundle Seal\n(Root Signature over Manifest)"]
-        CLAIM["claim.json\n(Declared Bounds + Metrics)"]
-        BUNDLE["Evidence Bundle\n(claim_bundle/)"]
+    subgraph S2["2. Pipeline & Evidence Packaging (Producer Authority)"]
+        INGEST["Biochar Claim Pipeline\n(Deterministic Lineage Engine)"]
+        PRODUCER_KEY["Producer Root Private Key\n(Trust Anchor / eIDAS Seal)"]
+        DEV_CERT["Gateway Certificate\n(Signed Device PubKey + NAWI Metrology)"]
+        LAB_REF["Accredited Lab Analysis (ISO 17025)\n(an accredited lab: C_org 82.00%, Moisture 15.00%)"]
+        FEED_REF["Biomass Delivery Manifest\n(FSC Forestry Residue Quota Cap)"]
+        MASS_BALANCE["Mass-Balance Transformation\n(Net Dry Mass: M_dry <= M_feedstock)"]
+        CRCF_CALC["CRCF Net Removal Recipe\n(Stoichiometry: 44/12 * C_org * F_perm)"]
+        PROV["W3C PROV-O Lineage Graph\n(Entity & Activity Cryptographic Digests)"]
+        MANIFEST["Canonical manifest.json\n(SHA-256 Inventory of all Artifacts)"]
+        BUNDLE_SEAL["Producer Bundle Seal\n(Root Signature over manifest.json)"]
+        CLAIM["claim.json\n(Net Tonnes CO2 Removed Declared)"]
+        BUNDLE["Biochar Evidence Bundle\n(biochar_bundle/)"]
 
-        SIGNED_OBS -->|Stream ingestion| INGEST
-        ROOT_KEY -->|Signs & issues| DEV_CERT
+        BATCH_OBS -->|Stream ingestion| INGEST
+        LAB_REF --> INGEST
+        FEED_REF --> INGEST
+        PRODUCER_KEY -->|Issues & certifies| DEV_CERT
+        INGEST --> MASS_BALANCE
+        MASS_BALANCE --> CRCF_CALC
         INGEST --> PROV
-        INGEST --> RECIPES
         INGEST --> CLAIM
         DEV_CERT --> BUNDLE
+        LAB_REF --> BUNDLE
+        FEED_REF --> BUNDLE
+        MASS_BALANCE --> BUNDLE
+        CRCF_CALC --> BUNDLE
         PROV --> BUNDLE
-        RECIPES --> BUNDLE
         CLAIM --> BUNDLE
-        SIGNED_OBS --> BUNDLE
+        BATCH_OBS --> BUNDLE
         BUNDLE -->|Inventory hashed| MANIFEST
-        ROOT_KEY -->|Seals manifest| BUNDLE_SEAL
+        PRODUCER_KEY -->|Cryptographically seals| BUNDLE_SEAL
         BUNDLE_SEAL --> MANIFEST
     end
 
-    subgraph S3["3. Zero-Trust Offline Auditor Verifier"]
-        VERIFIER["Offline Verifier Engine\n(verify_bundle.py / Native OpenSSL)"]
-        ROOT_PUB["Company Root Public Key\n(Trust Anchor)"]
-        REGISTRY["Auditor Pinned Registry\n(trusted_references.json)"]
+    subgraph S3["3. Zero-Trust Offline Auditor Verifier (VVB / Registry)"]
+        VERIFIER["Offline Verifier Engine\n(verify_bundle.py / Native OpenSSL CLI)"]
+        ROOT_PUB["Producer Root Public Key\n(Pinned Trust Anchor)"]
+        REGISTRY["Auditor Pinned Reference Registry\n(trusted_references.json)"]
         
         subgraph CHECKS["10-Check Fail-Closed Verification Engine"]
-            C1["1. Manifest Integrity & Bundle Seal"]
-            C2["2. Device Cert, Attestation & MID Pedigree"]
-            C3["3. P-256 Signatures & Timestamp Bounds"]
-            C4["4. Genesis-to-Terminal Hash-Chain"]
-            C5["5. Sequence Monotonicity & Dual Registers"]
-            C6["6. Period Boundary Bounds Enforcement"]
-            C7["7. PROV-O Graph & Recipe Lineage"]
-            C8["8. Authoritative Pinned Factor Match"]
-            C9["9. Independent Integer Wh Recomputation"]
+            C1["1. Manifest Integrity & Producer Seal"]
+            C2["2. Device Cert, Silicon RoT & NAWI Scale"]
+            C3["3. Batch Signatures & Temporal Bounds"]
+            C4["4. Unbroken Cryptographic Hash-Chain"]
+            C5["5. Pyrolysis Thermal Permanence (T >= 500°C)"]
+            C6["6. Claim Period Boundary Bounds"]
+            C7["7. W3C PROV-O Lineage & Recipes"]
+            C8["8. Pinned Reference Match (ISO 17025 + FSC)"]
+            C9["9. Mass-Balance Invariants & CRCF Recomputation"]
             C10["10. Zero-Tolerance Claim Reconciliation"]
         end
 
@@ -99,7 +110,7 @@ flowchart TD
 
         BUNDLE --> VERIFIER
         ROOT_PUB -->|Trust anchor| VERIFIER
-        REGISTRY -->|Pinned authority digests| VERIFIER
+        REGISTRY -->|Pinned ISO 17025 digests| VERIFIER
         VERIFIER --> CHECKS
         CHECKS --> AUDIT_VERDICT
     end
@@ -110,33 +121,37 @@ flowchart TD
 ```mermaid
 sequenceDiagram
     autonumber
-    participant M as Physical Meter (MID Class B)
-    participant E as Edge Gateway (ATECC608)
-    participant C as Company Pipeline
-    participant A as Auditor Verifier (Zero-Trust)
-    participant R as Pinned Authority Registry
+    participant K as Kiln Sensors (Type-K & NAWI Scale)
+    participant E as Edge Gateway (ATECC608 + Isolated RS-485)
+    participant P as Producer Pipeline (Ingestion & Lineage)
+    participant V as Offline Auditor Verifier (Air-Gapped)
+    participant R as Auditor Pinned Registry (trusted_references.json)
 
-    Note over M,E: Tier 1: Hardware Telemetry Ingestion
-    M->>E: Stream register readings (cumulative_wh, interval_wh)
-    E->>E: Calculate prev_hash chain: H_n = SHA256(H_{n-1} || reading_n)
-    E->>E: Sign observation envelope with Silicon Private Key (NIST P-256)
-    E-->>C: Stream signed observations.ndjson
+    Note over K,E: Tier 1: Hardware Telemetry Ingestion (Safe Zone)
+    K->>E: Stream continuous Modbus registers (temp_min_c, scale_wet_mass_g)
+    E->>E: Verify thermal permanence invariant (temp_min_c >= 500°C)
+    E->>E: Compute hash-chain link: H_n = SHA256(H_{n-1} || batch_n)
+    E->>E: Sign batch observation envelope with Silicon Key (NIST P-256 ECDSA)
+    E-->>P: Stream signed observations.ndjson
 
-    Note over C: Tier 2: Transformation & Sealing
-    C->>C: Execute energy aggregation & Scope 2 GHG calculation
-    C->>C: Generate W3C PROV-O graph & claim.json with period boundaries
-    C->>C: Hash all bundle files into canonical manifest.json
-    C->>C: Sign manifest.json with Company Root Key (Bundle Seal)
+    Note over P: Tier 2: Transformation, Lineage & Sealing
+    P->>P: Ingest observations & bind ISO 17025 lab report (C_org, moisture)
+    P->>P: Verify physical mass-balance (M_dry <= M_feedstock, total <= FSC cap)
+    P->>P: Calculate net permanent CO2 removal under EU CRCF Delegated Reg 2026/285
+    P->>P: Generate W3C PROV-O graph & claim.json
+    P->>P: Compute canonical manifest.json hash inventory
+    P->>P: Sign manifest.json with Producer Root Key (Bundle Seal)
 
-    Note over A,R: Tier 3: Independent Offline Audit
-    C-->>A: Submit sealed claim_bundle/ & Company Root Public Key
-    A->>A: Check 1: Verify Company Root Signature over manifest.json (Bundle Seal)
-    A->>A: Check 2: Verify Microchip Factory Attestation & MID Metrology Pedigree
-    A->>A: Check 3-5: Verify Observation Signatures, Hash-Chain & Dual Registers
-    A->>A: Check 6: Enforce period boundaries (record_count, terminal_hash)
-    A->>R: Check 8: Match bundled emission factor against Pinned ISPRA/EEA Registry
-    A->>A: Check 9-10: Independently sum integer Wh & reconcile carbon claim
-    A-->>A: Emit Audit Verdict: PASSED (Zero-Knowledge, Air-Gapped)
+    Note over V,R: Tier 3: Zero-Trust Offline Audit (Puro.earth / EBC / VVB)
+    P-->>V: Submit sealed biochar_bundle/ & Producer Root Public Key
+    V->>V: Check 1: Verify Producer Root Signature over manifest.json (Bundle Seal)
+    V->>V: Check 2: Verify ATECC608 Silicon RoT & EU 2014/31/EU NAWI Scale Metrology
+    V->>V: Check 3-4: Verify Batch Signatures & Cryptographic Hash-Chain Continuity
+    V->>V: Check 5: Verify Thermal Permanence across all batches (T >= 500°C)
+    V->>R: Check 8: Match Lab Report & Biomass Manifest against Auditor Pinned Registry
+    V->>V: Check 9: Recompute dry biochar, check mass conservation & integer stoichiometry
+    V->>V: Check 10: Match recomputed removal against declared claim (Zero-Tolerance)
+    V-->>V: Emit Formal Audit Verdict: [AUDIT VERDICT: PASSED] (20.523 t CO2 verified)
 ```
 
 ---
