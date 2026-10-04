@@ -14,16 +14,16 @@
 
 ### Field 2: Proposal Title
 **Draft Title:**
-Verifiable Telemetry: Open-Source Cryptographic dMRV and Hardware Root-of-Trust for High-Durability Carbon Removals
+Verifiable Telemetry: Open-Source Hardware Root-of-Trust and Local-First Provenance for Industrial Climate Data
 
-*(Length: 109 characters)*
+*(Length: 111 characters)*
 
 ---
 
 ### Field 3: Project Website(s) / Repositories
 *(Free text)*
 **Draft:**
-https://github.com/[username]/verifiable-telemetry
+https://github.com/aloysiusjebanson-lab/trustworthy-telemetry
 (Repository will be made public upon application review; includes initial working edge simulator, offline verifier CLI, and evidence bundle specifications under Apache 2.0).
 
 ---
@@ -32,11 +32,11 @@ https://github.com/[username]/verifiable-telemetry
 *(Limit: Max 1,000 characters)*
 
 **Draft Text:**
-European carbon removal certification (EU CRCF Regulation 2024/1735, Delegated Regulation 2026/285) and permanent registries (Puro.earth, EBC) require digital monitoring, reporting, and verification (dMRV) for biochar carbon removal. Unlike electricity where utility bills cross-check consumption, carbon removal occurs in private plants with no external counterparty, creating huge financial incentives to manipulate spreadsheets for high-value credits (€110–€180/t).
+Today, industrial IoT lacks an open, trustworthy internet architecture: sensor data is funneled into proprietary cloud "dark stacks", unauthenticated SQL databases, and manual spreadsheets where telemetry can be silently altered or falsified before audit. Nowhere is this trust gap more severe than high-durability carbon removals (EU CRCF Regulation 2024/1735, Delegated Regulation 2026/285, Puro.earth) and industrial ESG (CSRD), where high-value carbon claims (€110–€180/t) currently rest on unverified CSVs.
 
-This project delivers an open-source, local-first dMRV engine. A hardened edge gateway captures physical sensor telemetry (pyrolysis thermocouples, legal-for-trade scale indicators) directly at the wire, signing readings inside hardware secure elements (ATECC608) into an unbroken hash-chain. Data packages into self-contained claim bundles with mass-balance proofs, allowing auditors to independently verify physical provenance, thermal permanence, and net removals offline with zero cloud lock-in.
+This project delivers an open-source, local-first cryptographic telemetry engine. A hardened edge gateway captures raw physical sensor data (RS-485 Modbus thermocouples, legal scales) directly at the wire, signing readings in hardware secure elements (ATECC608) into unbroken hash-chains. Self-contained W3C PROV-O bundles allow independent auditors to verify physical origin, process permanence, and net removals 100% offline with zero cloud vendor lock-in.
 
-*(Current character count: 969 / 1,000 characters)*
+*(Current character count: 971 / 1,000 characters)*
 
 ---
 

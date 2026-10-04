@@ -41,7 +41,7 @@
 
 | # | Task | Priority | Owner | Status | Due | Notes |
 |---|------|----------|-------|--------|-----|-------|
-| 2.1 | Draft Field 3: Project Summary (≤1000 chars) | 🔴 | Together | ✅ | Oct 5 | Complete (969/1000 chars) focused on EU CRCF biochar dMRV |
+| 2.1 | Draft Field 3: Project Summary (≤1000 chars) | 🔴 | Together | ✅ | Oct 5 | Complete (971/1000 chars) reframed to open internet stack / dark stack elimination |
 | 2.2 | Draft Field 5: Budget Breakdown (≤4000 chars) | 🔴 | Together | ✅ | Oct 6 | Complete (3,960/4000 chars) across 4 milestones (€38,000) |
 | 2.3 | Draft Field 7: Comparison with Other Efforts (≤4000 chars) | 🔴 | Together | ✅ | Oct 7 | Complete (3,410/4000 chars) vs SaaS dMRV/Web3/Spreadsheets |
 | 2.4 | Draft Field 8: Technical Challenges (≤4000 chars) | 🔴 | Together | ✅ | Oct 8 | Complete (3,718/4000 chars) covering isolation, oracle bounds, scales |
@@ -49,7 +49,7 @@
 | 2.6 | Draft Field 10: Background / Why You (≤2000 chars) | 🔴 | **User** | ✅ | Oct 10 | Complete (1,587/2000 chars) with Polimi MSc & mechanical telemetry depth |
 | 2.7 | Draft Field 11: Other Funding Sources (≤1000 chars) | 🟡 | Together | ✅ | Oct 10 | Complete (422/1000 chars) self-funded |
 | 2.8 | Decide AI disclosure strategy (Path A or B) | 🔴 | User | ⬜ | Oct 10 | Path A (rewrite in own voice) vs Path B (disclose) |
-| 2.9 | Choose project title (final) | 🟡 | Together | ✅ | Oct 8 | Final title selected (109 chars) |
+| 2.9 | Choose project title (final) | 🟡 | Together | ✅ | Oct 8 | Final title selected (111 chars, Restack-aligned) |
 
 **Phase 2 Exit Criteria:** All 8 application fields have first drafts with character counts.
 
