@@ -1,0 +1,13 @@
+{
+  "attestation_type": "microchip_atecc608_factory_attestation",
+  "chip_serial": "0123A06B53A7319F",
+  "device_public_key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgMKNqtRIsiNuQm5+X7qQsKKAVrJd\nyTcW1TiFTkQDCbL+L0EpkrebqG/hNJWpE2OEVkH05yCVYcOlv6RZIvJQUQ==\n-----END PUBLIC KEY-----",
+  "signer": "Microchip Technology Production Root CA",
+  "attestation_status": "verified_hardware_secure_element",
+  "secure_element_part": "ATECC608A-TNGTLS",
+  "features": [
+    "hardware_private_key_isolation",
+    "true_random_number_generator",
+    "anti_tamper_active_shield"
+  ]
+}

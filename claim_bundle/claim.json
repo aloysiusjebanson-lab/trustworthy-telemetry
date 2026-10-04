@@ -1,0 +1,22 @@
+{
+  "claim_id": "claim_device_a06b53a7319f_1791116094_1791119694",
+  "target_facility": "Milan Commercial Facility #01",
+  "meter_id": "meter_main_switchgear_01",
+  "device_id": "device_a06b53a7319f",
+  "reporting_period": {
+    "start_timestamp": 1791116094,
+    "end_timestamp": 1791119694,
+    "first_sequence": 1,
+    "last_sequence": 5,
+    "record_count": 5
+  },
+  "declared_metrics": {
+    "total_energy_wh": 12500,
+    "total_energy_kwh": 12.5,
+    "emission_factor_value": 0.275,
+    "emission_factor_unit": "kg_co2e_per_kwh",
+    "total_emissions_kg_co2e": 3.4375
+  },
+  "status": "declared_claim",
+  "generated_at": 1791119694
+}

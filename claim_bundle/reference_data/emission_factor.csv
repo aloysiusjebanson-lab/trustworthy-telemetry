@@ -1,0 +1,2 @@
+country,factor_year,activity_type,unit,kg_co2e_per_unit,source
+IT,2026,electricity_grid_mix,kWh,0.2750,ISPRA / National Inventory Report 2026

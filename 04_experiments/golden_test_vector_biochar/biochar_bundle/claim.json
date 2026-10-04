@@ -1,0 +1,19 @@
+{
+  "claim_id": "claim_biochar_removal_2026_q3",
+  "profile": "biochar_pyrolysis",
+  "facility_id": "facility_pyrolysis_plant_trentino",
+  "kiln_id": "kiln_rotary_continuous_01",
+  "first_sequence": 1,
+  "last_sequence": 5,
+  "batch_count": 5,
+  "terminal_hash": "1ba8e4c651604f4536086dfbef03e99c9c5a69e044f11794e1917f4e15a45bb2",
+  "metrics": {
+    "total_feedstock_input_g": 31250000,
+    "total_wet_biochar_g": 10000000,
+    "total_dry_biochar_g": 8500000,
+    "gross_co2_removed_g": 21723166,
+    "process_deductions_co2_g": 1200000,
+    "net_co2_removed_g": 20523166,
+    "net_co2_removed_tonnes": 20.523166
+  }
+}

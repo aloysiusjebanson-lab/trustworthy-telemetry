@@ -1,0 +1,19 @@
+{
+  "transformation_id": "transformation_crcf_net_removal",
+  "methodology": "EU_CRCF_Permanent_Removal_Delegated_Act_2026_285",
+  "formula": "Net_CO2 = Gross_CO2 - Process_Emissions; Gross_CO2 = M_dry * C_org * F_perm * (44/12)",
+  "inputs": {
+    "mass_balance_recipe": "transformations/mass_balance.json",
+    "lab_analysis": "reference_data/lab_analysis.json"
+  },
+  "stoichiometric_ratio": "44/12",
+  "calculations": {
+    "total_dry_biochar_g": 8500000,
+    "c_org_bps": 8200,
+    "permanence_factor_bps": 8500,
+    "gross_co2_removed_g": 21723166,
+    "process_deductions_co2_g": 1200000,
+    "net_co2_removed_g": 20523166,
+    "net_co2_removed_tonnes": 20.523166
+  }
+}

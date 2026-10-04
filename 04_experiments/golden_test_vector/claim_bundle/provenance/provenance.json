@@ -1,0 +1,31 @@
+{
+  "prefix": {
+    "prov": "http://www.w3.org/ns/prov#"
+  },
+  "entity": {
+    "observations:observations.ndjson": {
+      "type": "raw_telemetry_stream",
+      "sha256": "12f444bef043e8165782ba2787690466a12711f6c992e49e711dc5dbe60d0959"
+    },
+    "reference:emission_factor.csv": {
+      "type": "authoritative_factor",
+      "sha256": "8e6cc7a7359fb935c5bdf236bd193fa996dfb990a40873f719f99ae5d5f69442"
+    },
+    "claim:claim.json": {
+      "type": "final_sustainability_claim"
+    }
+  },
+  "activity": {
+    "act:energy_aggregation": {
+      "type": "transformation",
+      "recipe": "energy_aggregation.json"
+    },
+    "act:carbon_calculation": {
+      "type": "transformation",
+      "recipe": "carbon_calculation.json"
+    }
+  },
+  "wasGeneratedBy": {
+    "claim:claim.json": "act:carbon_calculation"
+  }
+}

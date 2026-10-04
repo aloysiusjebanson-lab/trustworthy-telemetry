@@ -1,0 +1,20 @@
+{
+  "certificate_body": {
+    "device_id": "device_a06b53a7319f",
+    "device_type": "edge_gateway_modbus_p256",
+    "meter_binding": "meter_main_switchgear_01",
+    "metrology": {
+      "meter_model": "Carlo Gavazzi EM24",
+      "standard": "MID_2014_32_EU",
+      "accuracy_class": "Class_B_EN50470",
+      "calibration_cert_sha256": "8e6cc7a7359fb935c5bdf236bd193fa996dfb990a40873f719f99ae5d5f69442",
+      "calibration_valid_until": 1893456000
+    },
+    "device_public_key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgMKNqtRIsiNuQm5+X7qQsKKAVrJd\nyTcW1TiFTkQDCbL+L0EpkrebqG/hNJWpE2OEVkH05yCVYcOlv6RZIvJQUQ==\n-----END PUBLIC KEY-----",
+    "valid_from": 1767225600,
+    "valid_until": 1830297600,
+    "issued_by": "company_authority_milan"
+  },
+  "company_signature": "30460221008eb5d2e39591df852ba9a646626206792c36129f08a7cd3c2865e2c1ad5f09fd022100d684984783e5eb608265ba58bb9645d8133fa0219ab4d28d89e531aa018b9364",
+  "algorithm": "ECDSA_P256_SHA256"
+}

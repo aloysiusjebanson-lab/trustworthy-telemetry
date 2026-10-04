@@ -1,0 +1,34 @@
+{
+  "registry_version": "1.2",
+  "maintained_by": "Independent Environmental Audit Authority",
+  "updated_at": 1773532800,
+  "datasets": {
+    "8e6cc7a7359fb935c5bdf236bd193fa996dfb990a40873f719f99ae5d5f69442": {
+      "dataset_id": "ispra_it_grid_2026",
+      "type": "grid_emission_factor",
+      "publisher": "ISPRA - Istituto Superiore per la Protezione e la Ricerca Ambientale",
+      "publication_year": 2026,
+      "country": "IT",
+      "activity_type": "electricity_grid_mix",
+      "unit": "kWh",
+      "kg_co2e_per_unit": 0.2750,
+      "source_document": "ISPRA National Inventory Report 2026 / Italian Greenhouse Gas Inventory"
+    },
+    "f3706c09cfe73a4b5ab0a8ef3c6205aedd2d85bc6cd797b12d60a0cdebb26281": {
+      "dataset_id": "eurofins_ebc_lab_2026_q3",
+      "type": "iso17025_accredited_lab_report",
+      "lab": "Eurofins Environmental Testing / EBC Accredited",
+      "accreditation": "DIN EN ISO/IEC 17025:2018",
+      "c_org_bps": 8200,
+      "moisture_bps": 1500,
+      "permanence_factor_bps": 8500
+    },
+    "b6e8b1049d2041554ba56384e66c55b5b3178cdf2c793ee07075381a9fedf07b": {
+      "dataset_id": "delivery_fsc_wood_2026_09",
+      "type": "feedstock_delivery_manifest",
+      "supplier": "Dolomiti Biomass Cooperative",
+      "ebc_positive_list_code": "EBC-1.1-FOREST",
+      "delivered_mass_total_g": 40000000
+    }
+  }
+}

@@ -1,0 +1,7 @@
+study_id,short_citation,year,source_type,domain,physical_sensing,hardware_identity,signed_observations,stream_integrity,processing_provenance,reference_data_provenance,independent_reproduction,adversarial_evaluation,physical_limits,decision,evidence_notes,url
+L001,Morewood - Building energy performance monitoring through the lens of data quality,2023,journal,building energy,unclear,no,no,partial,partial,no,no,no,partial,screen,Review establishing fragmented data-quality reporting,https://doi.org/10.1016/j.enbuild.2022.112701
+L002,Secure Data Provenance for the Internet of Things,2017,conference,IoT provenance,yes,yes,yes,partial,no,no,no,partial,partial,screen,Closest source-provenance stream,https://doi.org/10.1145/3055245.3055255
+L003,A survey on data provenance in IoT,2020,journal,IoT provenance,partial,partial,partial,partial,partial,no,no,partial,partial,screen,Survey to use for backward snowballing,https://doi.org/10.1007/s11280-019-00746-1
+L004,Carbon MRV for cleaner built environment - solar photovoltaic blockchain tool,2024,journal,building carbon MRV,yes,partial,partial,partial,partial,partial,partial,partial,unclear,screen,Assess source and processing trust boundaries,https://doi.org/10.1016/j.jclepro.2024.143456
+L005,Semantic Digital Thread framework for explainable lifecycle carbon management,2026,journal,building lifecycle carbon,yes,no,no,partial,yes,yes,yes,unclear,partial,priority-full-text,Primary novelty comparator,https://www.sciencedirect.com/science/article/pii/S0926580526002670
+

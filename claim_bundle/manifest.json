@@ -1,0 +1,24 @@
+{
+  "manifest_version": "1.1",
+  "bundle_spec": "02_protocol/evidence_bundle_spec.md",
+  "created_at": 1791119694,
+  "claim_id": "claim_device_a06b53a7319f_1791116094_1791119694",
+  "files": {
+    "claim.json": "6bb610f4bd90b37b0253254e7baae8d59b987345107bb0991ac8cf048d098ae0",
+    "device/device_certificate.json": "8d8fa60d99b27e3739b6bafb2f08908e94ab9d7376dca7647bea8b3892ab12ed",
+    "device/hardware_attestation.json": "b2dd9fa0d13b4bd9f04301ea22b1481c7cff203033c56cc17a0dab76991bdf7e",
+    "device/identity.json": "c31c31aed82a88d8545c74e00c7c850d5f11f733803c4ec5c9961a9f66ba38ff",
+    "device/public_key.pem": "6b5aa5626e387898563516cd8601cb0cdc2d7a37370eaee80c5ed45ba8ead82e",
+    "observations/observations.ndjson": "645fcde0da70d23c1f1aba9c431ded2164f9fccd62ca90ae4637973ea3141a6e",
+    "provenance/provenance.json": "46227f753789e3867b372b7ef34705243db565dd104fa8f917b31d3e00f3e20d",
+    "reference_data/emission_factor.csv": "8e6cc7a7359fb935c5bdf236bd193fa996dfb990a40873f719f99ae5d5f69442",
+    "reference_data/emission_factor_metadata.json": "7920e3d2d2555808b9fba1e7efb534a83e7708bdcf2e741fb112a9c501d41beb",
+    "transformations/carbon_calculation.json": "88fe1b013908501092898863183d6e2df8e8b55e70bc6f50e6cc24b6d8d994a2",
+    "transformations/energy_aggregation.json": "1ca1d232c7f1e35631a115cc0cc4ffb25616384a75a49c89a3406c8b30fb49df"
+  },
+  "bundle_seal": {
+    "signature": "3045022100b1b7defede3b05c091df0405fa63c5a9660caf643bd6bfdcf580f6e2c016645702205abf21592dedb6ed6202387ae6da684814fac6af219e0d1355dd20548820290a",
+    "algorithm": "ECDSA_P256_SHA256",
+    "signed_content": "canonical_json(files, separators=(',',':'), sort_keys=True)"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "transformation_id": "trans_carbon_calculation_v1",
+  "description": "GHG Scope 2 location-based carbon quantification",
+  "input_energy_transformation_sha256": "9af8db483e4b67114cf90922204a1c49953c76c54f2f801bb3b78bc1289a09b2",
+  "input_emission_factor_sha256": "8e6cc7a7359fb935c5bdf236bd193fa996dfb990a40873f719f99ae5d5f69442",
+  "reference_country": "IT",
+  "reference_activity_type": "electricity_grid_mix",
+  "energy_wh": 12500,
+  "energy_kwh": 12.5,
+  "emission_factor_kg_per_kwh": 0.275,
+  "calculated_co2e_kg": 3.4375,
+  "standard": "GHG Protocol Scope 2 Guidance / ISO 14064-1",
+  "executed_at": 1791111420
+}

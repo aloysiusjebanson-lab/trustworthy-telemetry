@@ -1,0 +1,27 @@
+{
+  "certificate_body": {
+    "device_id": "device_biochar_b3fb8f235ad2",
+    "device_type": "pyrolysis_dMRV_gateway",
+    "kiln_binding": "kiln_rotary_continuous_01",
+    "metrology": {
+      "scale_model": "Mettler Toledo IND570",
+      "standard": "EU_Directive_2014_31_EU_NAWI",
+      "accuracy_class": "Class_III",
+      "max_capacity_g": 5000000,
+      "scale_serial_number": "MT-IND570-984321",
+      "calibration_cert_sha256": "4b92b67f1839d084c8a2b5e28a479b1d98a2e41f6c8d7e9b1a2c3d4e5f6a7b8c",
+      "calibration_valid_until": 1893456000
+    },
+    "thermocouple_module": {
+      "module_model": "Advantech ADAM-4015",
+      "sensor_type": "Type_K_Thermocouple",
+      "calibration_valid_until": 1893456000
+    },
+    "device_public_key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEpP2H0cyJMzDNgD9/nu1Tn7GQoX8b\nZp/vWk4LEBXdxIv/MWRN1FajjUZ5W+XEctLOSydR8BXxNMYHzB96P37xJw==\n-----END PUBLIC KEY-----",
+    "valid_from": 1767225600,
+    "valid_until": 1830297600,
+    "issued_by": "producer_authority_eu"
+  },
+  "company_signature": "30450221008c1590b36474a266bba2e08106234592b1e67562039854ad8c37a728dfefa0fb02203497f162fc72048366cd071ffa1eb29e32cb1feae47d7a85fd069e14ed601e7b",
+  "algorithm": "ECDSA_P256_SHA256"
+}

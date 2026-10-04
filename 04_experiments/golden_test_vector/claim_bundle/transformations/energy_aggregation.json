@@ -1,0 +1,15 @@
+{
+  "transformation_id": "trans_energy_aggregation_v1",
+  "description": "Summation of discrete interval meter readings in integer Watt-hours",
+  "input_observations_sha256": "12f444bef043e8165782ba2787690466a12711f6c992e49e711dc5dbe60d0959",
+  "record_count": 5,
+  "period_start_timestamp": 1791107820,
+  "period_end_timestamp": 1791111420,
+  "first_sequence": 1,
+  "last_sequence": 5,
+  "terminal_hash": "8fb873b4bc7ef1ac42d3067ce570e475bf0fcf805c04f511df14405defc98cd4",
+  "aggregated_energy_wh": 12500,
+  "aggregated_energy_kwh": 12.5,
+  "algorithm": "sum_interval_wh",
+  "executed_at": 1791111420
+}

@@ -1,0 +1,9 @@
+{
+  "device_id": "device_a06b53a7319f",
+  "device_type": "edge_gateway_modbus_p256",
+  "hardware_secure_element": "Microchip ATECC608A",
+  "meter_id": "meter_main_switchgear_01",
+  "public_key_file": "public_key.pem",
+  "certificate_file": "device_certificate.json",
+  "attestation_file": "hardware_attestation.json"
+}
