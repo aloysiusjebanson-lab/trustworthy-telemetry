@@ -26,7 +26,7 @@
 | # | Task | Priority | Owner | Status | Due | Notes |
 |---|------|----------|-------|--------|-----|-------|
 | 1.1 | Make go/no-go decision on applying | 🔴 | User | ✅ | Sept 29 | GO decision confirmed — committed to apply |
-| 1.2 | Create public GitHub repo (name, description, LICENSE) | 🔴 | Together | 🔵 | Sept 30 | Apache 2.0 license created locally; ready for remote repo |
+| 1.2 | Create GitHub repo (name, description, LICENSE) | 🔴 | Together | ✅ | Oct 4 | Private repo created (`aloysiusjebanson-lab/trustworthy-telemetry`), pushed to `main`; private keys & commercial files verified excluded |
 | 1.3 | Write repo README.md (problem, architecture diagram, vision) | 🔴 | Together | ✅ | Oct 1 | Comprehensive technical README with 3-layer architecture & quickstart |
 | 1.4 | Move `evidence_bundle_spec.md` into repo | 🟡 | User | ✅ | Sept 30 | Implemented in pipeline and verified by verifier CLI |
 | 1.5 | Test & commit `mock_edge.py` (run it, fix issues) | 🟡 | Together | ✅ | Sept 29 | Zero-dependency OpenSSL NIST P-256 implemented & tested |
@@ -125,12 +125,12 @@ Sep 27                    Oct 3      Oct 12     Oct 19     Oct 27  Nov 1  Nov 3
 
 | Phase | Tasks | Done | Remaining |
 |-------|:-----:|:----:|:---------:|
-| 1. Foundation | 6 | 5 | 1 |
+| 1. Foundation | 6 | 6 | 0 |
 | 2. Drafting | 9 | 8 | 1 |
 | 3. Code | 5 | 4 | 1 |
 | 4. Polish | 6 | 0 | 6 |
 | 5. Submit | 4 | 0 | 4 |
-| **Total** | **30** | **17** | **13** |
+| **Total** | **30** | **18** | **12** |
 
 ---
 
