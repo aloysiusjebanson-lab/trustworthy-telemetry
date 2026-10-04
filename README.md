@@ -33,31 +33,42 @@ In high-durability carbon removal—such as industrial biochar pyrolysis certifi
 
 ```mermaid
 flowchart TD
-    subgraph S1["1. Physical Edge & Hardware Root-of-Trust (Safe-Zone PLC Cabinet)"]
-        KILN["Continuous Rotary Pyrolysis Kiln\n(Biomass Pyrolysis Reactor)"]
-        TC["Type-K Thermocouple Transmitter\n(RS-485 Modbus RTU | T >= 500°C)"]
+    subgraph P1["1. Physical Pyrolysis Facility & Field Instrumentation"]
+        FEED["Sustainable Biomass Feedstock Intake\n(FSC Forestry Residue Weighed at Weighbridge)"]
+        KILN["Continuous Rotary Pyrolysis Kiln\n(High-Temp Reactor Zone: T >= 500°C)"]
+        TC["Type-K Thermocouple Transmitter\n(RS-485 Modbus RTU inside Kiln Hearth)"]
+        QUENCH["Water Quenching Cooler\n(Mandatory Fire Safety: Quenches Biochar at Exit)"]
         SCALE["Legal-for-Trade Scale Indicator\n(EU Directive 2014/31/EU NAWI Class III)"]
-        
-        GATEWAY["Hardened Edge Gateway\n(2.5 kV Galvanically Isolated RS-485)"]
-        ATECC["Microchip ATECC608 Secure Element\n(Private Key locked in Silicon Slot 0)"]
-        HASH_CHAIN["Sequential Hash-Chain\n(prev_hash = SHA-256 of prior batch)"]
+        COMPOSITE["Composite Sample Collection\n(Representative Biochar Sampling Protocol)"]
+
+        FEED -->|Delivered biomass input| KILN
+        KILN -->|Thermal telemetry @ >500°C| TC
+        KILN -->|Hot biochar discharge| QUENCH
+        QUENCH -->|Quenched biochar wet mass| SCALE
+        QUENCH -.->|Physical sample| COMPOSITE
+    end
+
+    subgraph S1["2. Safe-Zone Electrical Control Cabinet (<55°C) & Hardware RoT"]
+        CABINET["Hardened Control Cabinet\n(Armored Conduit + Tamper Microswitch)"]
+        GATEWAY["Hardened Edge Gateway\n(2.5 kV Galvanically Isolated RS-485 Modbus)"]
+        ATECC["Microchip ATECC608 Secure Element\n(Private Key Locked in Silicon Slot 0)"]
+        HASH_CHAIN["Sequential Hash-Chain Engine\n(prev_hash = SHA-256 of prior batch)"]
         BATCH_OBS["Signed Batch Observations\n(NIST P-256 ECDSA + Integer Grams)"]
 
-        KILN -->|Thermal telemetry| TC
-        KILN -->|Biochar output weight| SCALE
-        TC -->|Modbus RTU loop| GATEWAY
-        SCALE -->|Certified weight stream| GATEWAY
+        TC -->|Direct RS-485 loop bypassing SCADA/PLC| GATEWAY
+        SCALE -->|Certified serial weight stream| GATEWAY
+        CABINET --- GATEWAY
         ATECC -.->|Hardware root-of-trust| GATEWAY
         GATEWAY -->|Chains batch digest| HASH_CHAIN
         GATEWAY -->|Signs via ATECC608| BATCH_OBS
         HASH_CHAIN --> BATCH_OBS
     end
 
-    subgraph S2["2. Pipeline & Evidence Packaging (Producer Authority)"]
+    subgraph S2["3. Pipeline & Evidence Packaging (Producer Authority)"]
         INGEST["Biochar Claim Pipeline\n(Deterministic Lineage Engine)"]
         PRODUCER_KEY["Producer Root Private Key\n(Trust Anchor / eIDAS Seal)"]
         DEV_CERT["Gateway Certificate\n(Signed Device PubKey + NAWI Metrology)"]
-        LAB_REF["Accredited Lab Analysis (ISO 17025)\n(an accredited lab: C_org 82.00%, Moisture 15.00%)"]
+        LAB_REF["Accredited Lab Analysis (ISO 17025)\n(an accredited lab: C_org 82%, Moisture 15%, 14C)"]
         FEED_REF["Biomass Delivery Manifest\n(FSC Forestry Residue Quota Cap)"]
         MASS_BALANCE["Mass-Balance Transformation\n(Net Dry Mass: M_dry <= M_feedstock)"]
         CRCF_CALC["CRCF Net Removal Recipe\n(Stoichiometry: 44/12 * C_org * F_perm)"]
@@ -67,6 +78,7 @@ flowchart TD
         CLAIM["claim.json\n(Net Tonnes CO2 Removed Declared)"]
         BUNDLE["Biochar Evidence Bundle\n(biochar_bundle/)"]
 
+        COMPOSITE -.->|Laboratory testing| LAB_REF
         BATCH_OBS -->|Stream ingestion| INGEST
         LAB_REF --> INGEST
         FEED_REF --> INGEST
@@ -88,7 +100,7 @@ flowchart TD
         BUNDLE_SEAL --> MANIFEST
     end
 
-    subgraph S3["3. Zero-Trust Offline Auditor Verifier (VVB / Registry)"]
+    subgraph S3["4. Zero-Trust Offline Auditor Verifier (VVB / Registry)"]
         VERIFIER["Offline Verifier Engine\n(verify_bundle.py / Native OpenSSL CLI)"]
         ROOT_PUB["Producer Root Public Key\n(Pinned Trust Anchor)"]
         REGISTRY["Auditor Pinned Reference Registry\n(trusted_references.json)"]
@@ -156,14 +168,183 @@ sequenceDiagram
 
 ---
 
-## Key Features
+## The Regulatory and Standards Governance Ecosystem
+
+Carbon credits for high-durability carbon removals cannot be self-issued or based on unverified operational claims. Legitimate producers must comply with a rigorous, multi-layered regulatory and statutory governance framework:
+
+1. **The EU CRCF (Carbon Removals and Carbon Farming Regulation — Delegated Regulation (EU) 2026/285):**
+   * **Statutory European Law:** The European Union's legally binding framework for permanent carbon removals.
+   * **Thermal Permanence Mandate:** Legally defines permanent biochar as biomass pyrolyzed at a sustained minimum temperature of $T \ge 500^\circ\text{C}$ with an organic molar ratio of $\text{H/C}_{\text{org}} \le 0.70$, guaranteeing carbon sequestration durability exceeding several centuries to millennia.
+   * **Net Life-Cycle Accounting:** Requires strict subtraction of all operational emissions ($E_{\text{process}}$, including kiln electricity, diesel for biomass harvesting/hauling, and water quenching pumping) from gross carbon content:
+     $$E_{\text{net}} = E_{\text{gross}} - E_{\text{leakage}} - E_{\text{process}}$$
+   * **Additionality & Baseline:** Requires audited proof that biomass harvesting does not deplete forest carbon stocks or violate EU RED III sustainability criteria.
+
+2. **The ICVCM (Integrity Council for the Voluntary Carbon Market):**
+   * **Core Carbon Principles (CCPs):** The independent governance body that benchmarks crediting methodologies.
+   * **Four Pillars:** Mandates *Robust Quantification* (no scientific uncertainty inflation), *Permanence* (mandatory buffer pools and thermal permanence audits), *No Double Counting* (unique immutable serial numbers), and *Independent Third-Party Verification*.
+
+3. **Major Registries and Certification Standards:**
+   * **Puro.earth (Puro Standard):** Holds >70% of the commercial durable CDR market. Issues CO2 Removal Certificates (CORCs). Requires physical VVB audits of production kilns, digital inspection of continuous thermocouple records, biomass delivery manifests, and accredited ISO 17025 laboratory test certificates before any credit can be minted.
+   * **European Biochar Certificate (EBC):** Defines certified feedstock positive lists (e.g. `EBC-1.1-FOREST` forestry residues), maximum limits for toxic contaminants (heavy metals, PAHs, dioxins), and certified agricultural applications.
+   * **Isometric:** High-integrity durable carbon removal standard enforcing strict quantitative uncertainty bounds, continuous monitoring, and zero-tolerance reconciliation.
+
+4. **Harmonized Statutory Legal Metrology:**
+   * **EU Directive 2014/31/EU (NAWI):** Non-Automatic Weighing Instruments directive governing legal-for-trade weighing indicators (Class III accuracy) used for certified batch mass measurement.
+   * **EU Directive 2014/32/EU (MID):** Measuring Instruments Directive governing Class B electricity submeters for industrial energy and Scope 2 GHG accounting.
+   * **EU Directive 2022/2464/EU (CSRD) & EPBD:** Mandatory corporate sustainability disclosures and energy performance standards across the European Single Market.
+
+---
+
+## Physical-to-Digital Boundary & Fraud Defense Architecture
+
+In industrial IoT and digital Measurement, Reporting, and Verification (dMRV), cryptographically securing data *after* it enters an edge gateway is necessary, but insufficient on its own. A truly trustworthy system must address the **physical-to-digital boundary**—the seam between physical plant operations and digital telemetry where real-world scams originate.
+
+Below is an engineering analysis of how Verifiable Telemetry closes the five primary real-world fraud vulnerabilities:
+
+```mermaid
+flowchart LR
+    subgraph VULN["Physical Attack Vectors"]
+        V1["1. Water Spraying\n(Soaking Biochar)"]
+        V2["2. Cold Kiln Undercooking\n(T < 500°C)"]
+        V3["3. Feedstock Substitution\n(Demolition Wood / Coal)"]
+        V4["4. Gateway OS Compromise\n(Confused Deputy)"]
+        V5["5. Downstream Leakage\n(Burning Biochar as Fuel)"]
+    end
+
+    subgraph DEF["Cryptographic & Physical Defenses"]
+        D1["Net Dry Mass Formula +\nMass Conservation Trap\n(M_dry <= M_feedstock)"]
+        D2["Direct Safe-Zone RS-485 Tap +\nSensor Fusion +\nT_min >= 500°C Invariant"]
+        D3["Pinned ISO 17025 Assays +\n14C Radiocarbon Dating +\nICP-MS Heavy Metal Caps"]
+        D4["Hardware Secure Boot +\nATECC608 Silicon RoT +\nCabinet Tamper Zeroization"]
+        D5["W3C PROV-O Lineage +\nGPS Spreader Telemetry +\nSoil Application Proof"]
+    end
+
+    V1 ==> D1
+    V2 ==> D2
+    V3 ==> D3
+    V4 ==> D4
+    V5 ==> D5
+```
+
+### 1. The "Water Spraying" Scam & The Mass Conservation Trap
+
+* **The Physical Reality:** Fresh biochar discharges from the pyrolysis kiln at $>500^\circ\text{C}$ and **must** be quenched with water immediately upon exiting to prevent spontaneous auto-ignition when exposed to atmospheric oxygen. Consequently, legal-for-trade scale indicators measure *wet* biochar mass ($M_{\text{wet}}$).
+* **The Scam:** A dishonest operator hoses down the output pile with thousands of liters of excess water, hoping that the heavier scale reading translates into inflated metric tonnes of carbon removal credits.
+* **The dMRV Defense:**
+  1. **Strict Net Dry Mass Quantification:** Carbon credits are never awarded on scale weight. Credits are calculated strictly on **Net Dry Mass**:
+     $$M_{\text{dry}} = \frac{M_{\text{wet}} \times (10,000 - \text{moisture\_bps})}{10,000}$$
+  2. **Automatic Moisture Discounting:** When the operator drenches the biochar, composite samples sent to an accredited ISO 17025 laboratory (e.g. an accredited lab) measure an elevated moisture percentage (e.g. 35.00%). This high moisture reading mathematically discounts the gross wet weight back to the exact true dry carbon weight. Water spraying is thus heavily penalized, not rewarded.
+  3. **The Inescapable Mass Conservation Trap:** If the operator attempts to cheat the moisture formula by forging the lab report to declare artificially low moisture (e.g. declaring 10.00% moisture while the biochar is actually 35.00% water), the resulting calculated dry biochar mass will mathematically exceed the dry biomass input:
+     $$M_{\text{dry}} > M_{\text{feedstock}}$$
+     Because wood pyrolysis has a maximum theoretical yield of 25–35% biochar, creating dry biochar out of thin air violates the first law of thermodynamics ($M_{\text{out}} \le M_{\text{in}}$). Verifier **Check 9** programmatically enforces $M_{\text{dry}} \le M_{\text{feedstock}}$ and fails closed immediately (**Attack B1 Caught**).
+
+### 2. The "Cold Kiln" Scam & Analog Sensor Spoofing ($T < 500^\circ\text{C}$)
+
+* **The Physical Reality:** Silicon microchips (including secure elements like the ATECC608 and microcontrollers) cannot operate above $125^\circ\text{C}$ and will physically melt inside a $650^\circ\text{C}$ pyrolysis hearth. Therefore, the physical sensor inside the kiln must be an analog thermocouple (Type-K).
+* **The Scam:** An operator operates the kiln at an energy-saving $350^\circ\text{C}$ (producing unstable charcoal that decomposes in agricultural soil within years rather than centuries), while manipulating software registers in the plant SCADA/PLC or placing a localized blowtorch on the thermocouple probe tip.
+* **The dMRV Defense:**
+  1. **Direct Safe-Zone Wire Tapping:** The edge gateway resides inside the locked electrical control cabinet in the safe zone ($<55^\circ\text{C}$). It taps the RS-485 Modbus RTU wire of the thermocouple transmitter directly, using 2.5 kV galvanically isolated transceivers. Telemetry is read directly at the hardware wire level, completely bypassing the plant SCADA/PLC software to prevent register overriding.
+  2. **Continuous Thermal Permanence Invariant (Check 5):** The verifier inspects continuous minimum temperatures across every batch observation. Any batch where $T_{\min} < 500^\circ\text{C}$ causes an immediate, fail-closed audit rejection (**Attack B2 Caught**).
+  3. **Multi-Zone Sensor Fusion:** To prevent localized probe spoofing (e.g., blowtorching a single thermocouple), the gateway reads a multi-point thermocouple array distributed across the kiln length (feed zone, reaction zone, discharge zone) and correlates temperature readings with induced draft (ID) fan current draw and differential hearth pressure. A manipulated probe disrupts aerodynamic-thermal correlation, triggering a cryptographic anomaly flag.
+
+### 3. The "Garbage In" Problem: Feedstock Fraud (Demolition Wood / Coal Dust)
+
+* **The Physical Reality:** Legal-for-trade scales weigh gravitational mass; they cannot determine molecular chemistry. A metric ton of fossil coal dust, tire crumbs, or toxic demolition lumber registers the exact same weight as a metric ton of certified sustainable forestry residues.
+* **The Scam:** A producer blends cheap fossil coal dust or demolition wood treated with toxic preservatives into the biomass feed to artificially multiply carbon yield at minimal feedstock expense.
+* **The dMRV Defense:**
+  1. **Authoritative Reference Pinning (Check 8):** Every batch binds to an ISO 17025 accredited laboratory assay whose SHA-256 digest is pinned in the auditor's independent reference registry (`trusted_references.json`).
+  2. **$^{14}\text{C}$ Radiocarbon Isotopic Dating:** Biogenic biomass absorbs atmospheric $^{14}\text{C}$ via photosynthesis during plant growth ($100\%\text{ Fraction Modern Carbon}$). Ancient fossil fuels (coal, lignite, petcoke) have zero $^{14}\text{C}$ due to radioactive decay over millions of years (half-life of $^{14}\text{C}$ is 5,730 years). Any fossil coal adulteration is immediately identified during ISO 17025 radiocarbon analysis.
+  3. **ICP-MS Heavy Metal & Preservative Screening:** Demolition wood treated with Chromated Copper Arsenate (CCA) or creosote is caught by mandatory ISO 17025 ICP-MS screening ($<10\text{ mg/kg}$ As, $<50\text{ mg/kg}$ Cu, $<1\text{ mg/kg}$ Cd).
+  4. **Cumulative Feedstock Quota Capping (Check 9):** Telemetry observations record the delivery note identifier (`delivery_fsc_wood_2026_09`). The verifier asserts that cumulative feedstock used across all verified batches cannot exceed the total verified biomass quota on the delivery manifest:
+     $$\sum M_{\text{feedstock\_input\_g}} \le M_{\text{feedstock\_delivered\_total\_g}}$$
+     This prevents "ghost-truck" double billing (**Attacks B4 & B8 Caught**).
+
+### 4. The "Confused Deputy" Attack (Gateway OS Compromise)
+
+* **The Physical Reality:** The Microchip ATECC608 secure element prevents private key extraction via physical side-channel resistance. However, the host processor (running Linux or RTOS) instructs the ATECC608 *what* payload to sign.
+* **The Scam:** An adversary breaches the gateway operating system via an unpatched network service or malicious USB drive, instructing the ATECC608 to sign fabricated sensor readings.
+* **The dMRV Defense:**
+  1. **Hardware Secure Boot:** The host processor's bootloader verifies the cryptographic digital signature of the OS kernel and firmware against a ROM-fused manufacturer key prior to execution.
+  2. **Physical Tamper Detection & Key Zeroization:** The edge gateway is housed inside a locked electrical cabinet equipped with chassis intrusion microswitches. If the cabinet door or gateway enclosure is opened without cryptographic maintenance authorization, the secure element immediately triggers hardware zeroization, permanently erasing its private keys.
+
+### 5. Downstream Leakage: The End-Use Blind Spot (Combustion vs Soil Sequestration)
+
+* **The Physical Reality:** If certified biochar is pyrolyzed cleanly at $>500^\circ\text{C}$ but subsequently sold to a third party and burned as barbecue charcoal or metallurgical fuel, all sequestered carbon is immediately released back into the atmosphere.
+* **The Scam:** A producer legitimately mints a carbon removal credit and simultaneously sells the biochar into thermal combustion markets.
+* **The dMRV Defense:**
+  1. **W3C PROV-O Digital Lineage Extension:** The evidence bundle's cryptographic lineage graph (`provenance/provenance.json`) does not stop at the factory loading dock.
+  2. **Verified Soil Application Manifests:** Final carbon credit retirement requires binding cryptographically signed delivery receipts and GPS-stamped tractor spreader telemetry proving that the biochar was blended into agricultural soils or permanent construction materials (e.g. concrete).
+
+---
+
+## Scope Boundary Matrix: What dMRV Enforces vs Physical Auditing
+
+A rigorous cybersecurity architecture must honestly define the division of labor between digital cryptography, physical metrology, and institutional auditing:
+
+| Fraud Vector | Can Software / Math Alone Solve It? | In-Scope dMRV Cryptographic Defense | Complementary Physical / Metrological Control |
+|---|:---:|---|---|
+| **Water Spraying (Moisture Fraud)** | No (cannot stop physical water hoses) | **Net Dry Mass Formula** ($M_{\text{dry}} = M_{\text{wet}} \times (1 - \text{moist})$) + **Mass Conservation Trap** ($M_{\text{dry}} \le M_{\text{feedstock}}$) | Composite sampling under ISO 17025 accredited laboratory protocol |
+| **Cold Kiln Undercooking ($T < 500^\circ\text{C}$)** | Yes | **Check 5 Invariant:** Continuous $T_{\min} \ge 500^\circ\text{C}$ signed at source; fails closed | Direct Modbus RS-485 tap inside safe-zone cabinet + Multi-Zone Sensor Fusion |
+| **Fossil Coal Dust Adulteration** | No (scales measure mass, not chemistry) | **Check 8 Pinned Reference Match:** Lab assay digest pinned in auditor registry | ISO 17025 $^{14}\text{C}$ radiocarbon dating (detects 0% modern carbon in fossil fuels) |
+| **Toxic Demolition Wood (CCA Treated)** | No (scales measure mass, not chemistry) | **Check 8 & 9 Delivery Quota:** Pinned EBC positive list supplier + usage cap | ISO 17025 ICP-MS heavy metal screening (strict limits on As, Cu, Cr) |
+| **Scale Drift / Cheap Fake Scales** | Yes | **Check 2 Metrological Pedigree:** EU Directive 2014/31/EU NAWI Class III certificate binding | Annual physical calibration by national metrology bodies (stamped lead seals) |
+| **Dropping Failed / Cold Batches** | Yes | **Check 4 Hash-Chain Continuity:** Sequential `prev_hash` links prevent record dropping | Monotonic hardware sequence counters locked in ATECC608 silicon |
+| **Post-Hoc Spreadsheet / DB Edits** | Yes | **Check 1 Bundle Seal:** Producer Root signature over canonical SHA-256 manifest | eIDAS Qualified Electronic Seal / enterprise PKI trust anchor |
+| **Sensor Cable Disconnection / Spoofing** | Partial | **Direct Cabinet Tapping:** Bypasses SCADA software registers; 2.5 kV galvanic isolation | Armored conduit, locked cabinet, chassis intrusion tamper switches |
+| **End-Use Combustion (BBQ Burning)** | No (factory cannot police customer usage) | **W3C PROV-O Graph:** Lineage tracking downstream to delivery manifest | GPS-tracked tractor spreader telemetry & verified soil application receipts |
+
+### The "Collusion-Forcing" Security Thesis
+> **Core Principle:** Verifiable Telemetry does not claim to replace physical reality. Instead, it alters the economic and operational attack surface:
+> 
+> * **Today:** An operator commits multi-million-dollar carbon fraud with **zero physical traces** by altering an Excel cell, modifying an unauthenticated SQL database row, or re-exporting a CSV.
+> * **With Verifiable Telemetry:** Fraud is elevated to **criminal hardware tampering or multi-party institutional collusion**. To fraudulently mint a credit, the operator must physically break into a locked cabinet, defeat hardware secure boot, violate thermodynamic mass conservation, and bribe an independent ISO 17025 accredited testing laboratory (an accredited lab) to falsify radiocarbon dating.
+
+---
+
+## Strategic Profile Selection: Why Biochar First, Energy Second, IAQ Third
+
+This project deliberately organizes its dMRV profiles into a prioritized, multi-phase roadmap based on market urgency, financial stakes, and thermodynamic verifiability:
+
+```mermaid
+flowchart TD
+    subgraph P1["Primary Profile (v1.0 - Complete)"]
+        BIOCHAR["Biochar Pyrolysis dMRV\n(EU CRCF / Puro.earth / EBC)\n- High cash value ($100-$200/t CO2)\n- Thermodynamic mass-balance invariants\n- Statutory permanence threshold (T >= 500°C)"]
+    end
+
+    subgraph P2["Secondary Profile (v1.1 - Complete)"]
+        ENERGY["Industrial Energy Submetering\n(CSRD / EPBD / Scope 2)\n- EU MID Class B legal metrology\n- Dual-register cumulative Wh consistency\n- Pinned national grid emission factors"]
+    end
+
+    subgraph P3["Roadmap Profile (v2.0 - Planned)"]
+        IAQ["Indoor Air Quality dMRV\n(LEED / WELL Green Building)\n- Anti-spoofing against canned air / nitrogen blowing\n- Continuous CO2, PM2.5, TVOC sensor fusion\n- Real estate certificate fraud prevention"]
+    end
+
+    P1 ==> P2 ==> P3
+```
+
+1. **Primary Profile: Biochar Pyrolysis (`biochar_pyrolysis` — v1.0, Complete):**
+   * **Highest Financial & Environmental Stakes:** High-durability carbon removal credits trade at **\$100–\$200 per metric ton of $\text{CO}_2$**. A medium-sized facility producing 5,000 tonnes of biochar per year moves hundreds of thousands of dollars in carbon finance, creating enormous financial incentives for moisture inflation, undercooking, or feedstock adulteration.
+   * **Rigid Physical Laws:** Pyrolysis is governed by inescapable thermodynamic invariants ($M_{\text{dry}} \le M_{\text{feedstock}}$) and statutory permanence definitions ($T \ge 500^\circ\text{C}$), making it the ultimate proving ground for cryptographic dMRV.
+
+2. **Secondary Profile: Industrial Energy Submetering (`energy_submetering` — v1.1, Complete):**
+   * **Statutory ESG Compliance:** Driven by the EU Corporate Sustainability Reporting Directive (CSRD) and Energy Performance of Buildings Directive (EPBD).
+   * **Dual-Register Invariants:** Enforces mathematical agreement between high-frequency interval readings and immutable cumulative registers ($\Delta \text{cumulative\_wh} == \text{interval\_wh}$) anchored to EU MID Class B meters.
+
+3. **Roadmap Profile: Indoor Air Quality (`indoor_air_quality` — v2.0, Planned):**
+   * **The Emerging Real-Estate Fraud Vector:** Commercial properties frequently manipulate indoor air quality (IAQ) sensors to achieve prestigious LEED or WELL green building certifications (e.g. blowing canned air or pure nitrogen on $\text{CO}_2$ and PM2.5 sensors during compliance audits to simulate superior ventilation).
+   * **Sensor Fusion Defense:** The cryptographic engine will be extended to correlate indoor $\text{CO}_2$, PM2.5, VOCs, HVAC fan speed, and outdoor air conditions to detect localized gas spraying and sensor isolation.
+
+---
+
+## Key Architectural Features
 
 1. **Zero External Dependencies:** Built entirely with Python 3 standard library and native POSIX OpenSSL CLI (`openssl dgst -sha256`). Runs in air-gapped auditor enclaves without `pip install`.
 2. **Sequential Cryptographic Hash-Chains:** Each reading embeds `prev_hash`, preventing head/tail truncation, record reordering, and telemetry splicing.
-3. **Dual-Register Meter Consistency:** Validates that interval energy matches physical running meter registers ($\text{cumulative\_wh}_t - \text{cumulative\_wh}_{t-1} == \text{interval\_wh}_t$).
-4. **Metrological Pedigree Binding:** Cryptographically binds meter model, MID 2014/32/EU accuracy class, and factory calibration validity into the signed device certificate.
-5. **Auditor-Pinned Reference Data:** Independent verification against pinned registry digests (`trusted_references.json`), neutralizing insider emission factor manipulation.
-6. **RFC 8785 Deterministic Canonicalization:** Strict integer Watt-hour accounting eliminates cross-platform floating-point drift between Python and Rust.
+3. **Statutory Thermodynamic & Process Invariants:** Enforces physical mass conservation ($M_{\text{dry}} \le M_{\text{feedstock}}$), thermal permanence ($T_{\min} \ge 500^\circ\text{C}$), and dual-register energy deltas ($\Delta \text{cumulative\_wh} == \text{interval\_wh}$).
+4. **Metrological Pedigree Binding:** Cryptographically binds sensor model, NAWI 2014/31/EU / MID 2014/32/EU accuracy class, and factory calibration validity into the signed device certificate.
+5. **Auditor-Pinned Reference Data:** Independent verification against pinned registry digests (`trusted_references.json`), neutralizing insider emission factor or laboratory assay manipulation.
+6. **RFC 8785 Deterministic Canonicalization:** Strict integer accounting (grams, degrees Celsius, basis points, Watt-hours) eliminates cross-platform floating-point drift between Python and Rust.
+7. **W3C PROV-O Cryptographic Lineage:** Unbroken provenance graph recording entities, activities, and cryptographic transformations from raw sensor telemetry to final registered claims.
 
 ---
 
