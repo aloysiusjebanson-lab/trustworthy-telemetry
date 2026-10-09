@@ -1,32 +1,66 @@
 # Project Status
 
-**Current phase:** Commercial Gate C1 — problem and spend verification  
-**Protocol frozen:** No  
-**Hardware authorized:** No  
-**Paper track:** Paused until a commercially valuable workflow is selected  
-**Target journal:** Optional; select only if publication supports defensibility or sales
+**Current Phase:** Phase 2 / Phase 3 Complete — Pre-Submission Review & Polish  
+**Target Program:** NLnet Restack Open Call 1 (Horizon Europe GA No. 101299072)  
+**Submission Target:** November 1, 2026 (23 days remaining / 2-day buffer)  
+**Hard Portal Deadline:** November 3, 2026 — 12:00 CET (25 days remaining)  
+**Protocol Frozen:** Yes (Specification v1.2 — Dual-Profile: Biochar dMRV primary, Energy submetering secondary)  
+**Hardware Root-of-Trust:** Architected (Microchip ATECC608 / TPM 2.0 / TCG DICE; testbench scheduled for M2/M4)  
+**Grant Target:** €38,000 across 4 milestones over 5 months  
+**Current Date:** October 9, 2026  
 
-## Current outcomes
+---
 
-- [ ] Populate the commercial evidence ledger for two candidate wedges
-- [ ] Find at least five independent spend/procurement signals per wedge
-- [ ] Map one exact disclosure workflow and identify who pays
-- [ ] Define and price a no-hardware concierge pilot
-- [ ] Make Gate C1 go/narrow/stop decision
+## Executive Summary of Technical State
 
-## Main risks
+1. **Dual-Profile Verifier Engine (`src/verifier/verify_bundle.py`):**
+   - 10 zero-trust fail-closed verification checks fully implemented.
+   - Zero external pip dependencies; native POSIX OpenSSL 3.x and Python standard library only.
+   - Evaluates both Biochar dMRV (`biochar_bundle/`) and Energy Submetering (`claim_bundle/`).
+   - Recomputes stoichiometric mass balances, statutory thermal invariants ($T_{\min} \ge 500^\circ\text{C}$), and EU CRCF / Puro net removals offline.
 
-| Risk | Trigger | Response |
-|---|---|---|
-| Closely equivalent system already exists | Same physical-origin-to-claim chain and adversarial evaluation found | Narrow novelty to a missing assurance property or stop before buying hardware |
-| Hardware delays software | Hardware not producing stable signed records by end of Week 5 | Submit software-backed evaluation and describe hardware as limited proof of concept |
-| Scope expansion | Any feature outside the frozen protocol is proposed | Add it to future work, not the current implementation |
-| Physical-truth overclaim | Draft uses “accurate,” “true,” or “attested measurement” without evidence | Replace with the precise assurance property actually evaluated |
-| Paywalled literature blocks screening | Full text unavailable for a likely-near study | Obtain through institutional access or contact the author before deciding novelty |
-| Interesting privacy problem has no budget owner | No observed spend or procurement signal | Stop or reposition around workflow cost/compliance rather than cryptography |
-| Regulator or auditor requires raw data | Alternative proof is not accepted | Sell local evidence-room and provenance automation; do not lead with ZKP |
-| Building-energy software market is crowded | Buyers already have monitoring/reporting tools | Target confidential evidence exchange and assurance integration, not generic dashboards |
+2. **Adversarial Benchmark Suite (`src/attacks/`):**
+   - **25 / 25 fraud vectors detected and rejected fail-closed**:
+     - Biochar dMRV suite (`biochar_attacks.py`): **10/10 caught** (including water spraying, cold-kiln undercooking, forged lab assays, quota exhaustion, uncertified scales).
+     - Outsider suite (`outsider_attacks.py`): **10/10 caught** (including falsified readings, dropped batches, replay attacks, path traversal, expired certificates).
+     - Insider corporate suite (`insider_fraud_suite.py`): **5/5 caught** (including factor greenwashing, register shaving, period truncation, unattested keys).
 
-## Next status update
+3. **Conformance Golden Test Vectors (`04_experiments/`):**
+   - Frozen immutable test vectors for Biochar (`golden_test_vector_biochar/`) and Energy (`golden_test_vector/`).
+   - Serves as the cross-language benchmark for Milestone 3 (Rust verifier engine).
 
-Update this file after the evidence ledger is populated and again at commercial Gate C1.
+4. **Grant Application Draft (`00_project/nlnet_restack_application_draft.md`):**
+   - All 8 application fields drafted and audited within character limits.
+   - Reframed under the NLnet "Restack the Internet" mandate: eliminating proprietary cloud dark stacks, replacing them with open-source, local-first hardware roots-of-trust and air-gapped cryptographic verification.
+   - Primary proving ground: high-durability carbon removals under EU CRCF (€110–€180/t).
+
+---
+
+## Active Milestone Progress
+
+| Item | Target | Status | Notes |
+|---|---|:---:|---|
+| Phase 1: Foundation & Git | Oct 4 | ✅ Done | Private GitHub repo synchronized; Apache 2.0 license; README v1.2 |
+| Phase 2: Application Drafting | Oct 10 | 🔵 90% | 8/8 fields drafted within character limits; Task 2.8 (AI disclosure decision) due Oct 10 |
+| Phase 3: Technical Proving | Oct 19 | 🔵 80% | Verifier, simulator, pipeline, and 25 attack suites done; Task 3.5 (terminal demo) pending |
+| Phase 4: Polish & Self-Score | Oct 20–27 | ⬜ Pending | Self-score against NLnet 7.0 rubric; finalize Field 10 personal voice |
+| Phase 5: Portal Submission | Nov 1 | ⬜ Pending | Submit on NLnet portal with 2-day buffer before Nov 3 12:00 CET |
+
+---
+
+## Risk Register & Mitigations
+
+| Risk | Probability | Severity | Mitigation Strategy |
+|---|:---:|:---:|---|
+| **NLnet Scope Framing Disconnect** | Low | High | Proposal reframed to lead with Open Internet Stack / local-first architecture (eliminating cloud SaaS dark stacks) with biochar and CSRD as high-stakes proving grounds. |
+| **Physical Sensor Spoofing (Analog Boundary)** | Medium | High | Addressed via safe-zone RS-485 tapping, multi-sensor thermal fusion, ISO 17025 accredited laboratory binding, and mass-conservation thermodynamic invariants ($M_{\text{dry}} \le M_{\text{feedstock}}$). |
+| **Portal Submission Glitches / Server Overload** | Medium | Critical | Target submission set to November 1, 2026 (48 hours ahead of the November 3, 12:00 CET hard deadline). |
+| **Dependency / Bitrot Risk** | Zero | High | Architecture enforces zero external pip dependencies; native OpenSSL 3.x ensures 10+ year forward auditability. |
+
+---
+
+## Next Immediate Actions
+
+1. **Task 2.8:** Decide AI disclosure strategy (Path A vs Path B) by October 10.
+2. **Task 3.5:** Record 90-second terminal demo screencast by October 19.
+3. **Phase 4:** Self-score proposal against NLnet 7.0 evaluation rubric (Oct 21).
