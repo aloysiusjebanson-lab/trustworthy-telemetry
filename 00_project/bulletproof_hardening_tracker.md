@@ -40,7 +40,7 @@ This tracker outlines the end-to-end plan to elevate the Verifiable Telemetry pi
   - **S4 (Path Traversal & Unmanifested Files):** Rejects path traversal and unexpected unmanifested files.
   - **S5 (Algorithm Whitelisting):** Enforces `ECDSA_P256_SHA256` only.
   - **S6 (Device ID Re-Derivation):** Re-derives `device_id` from public key bytes.
-  - **S7 (Metrological Pedigree Check):** Validates MID accuracy class and calibration expiration date.
+  - **S7 (Metrological Pedigree Check):** Validates MID accuracy class and calibration expiration date (implemented & verified Oct 11, 2026 via [`00_project/security_fix_tracker.md`](security_fix_tracker.md), Task C2).
   - **S8 (Fail-Closed Architecture):** Zero-crash policy across all malformed inputs.
   - **S9 (Integer Wh Math):** Zero-tolerance match on integer Watt-hours.
   - **S10 (Machine-Readable JSON Output):** Emits `--json` reports with strict exit codes.

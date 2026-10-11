@@ -30,11 +30,11 @@ We formalize three distinct threat actors with asymmetric capabilities and econo
 
 ---
 
-## 2. Comprehensive Adversarial Attack Benchmark (25/25 Caught)
+## 2. Comprehensive Adversarial Attack Benchmark (32/32 Caught)
 
-The architecture is validated against 25 automated adversarial attack vectors across three dedicated benchmark suites:
+The architecture is validated against 32 automated adversarial attack vectors across three dedicated benchmark suites:
 
-### 2.1 Biochar Pyrolysis dMRV Adversary Matrix (`src/attacks/biochar_attacks.py` — 10/10 Caught)
+### 2.1 Biochar Pyrolysis dMRV Adversary Matrix (`src/attacks/biochar_attacks.py` — 16/16 Caught)
 
 | ID | Attack Vector | Adversary Action | Cryptographic & Physical Defense | Verifier Check | Verdict |
 |:---:|---|---|---|:---:|:---:|
@@ -44,12 +44,18 @@ The architecture is validated against 25 automated adversarial attack vectors ac
 | **B4** | **Feedstock Cap Exhaustion** | Ingests batches consuming biomass beyond certified delivered quota | Cumulative Feedstock Quota Tracking: $\sum M_{\text{feedstock}} \le M_{\text{delivered\_quota}}$ | Check 9 | ❌ CAUGHT |
 | **B5** | **Dropped Batch / Omission** | Silently deletes cold or low-yield production batches | Sequential Hash-Chain Continuity: breaks $H_n = \text{SHA-256}(H_{n-1} \mathbin{\Vert} \text{batch}_n)$ | Check 4 | ❌ CAUGHT |
 | **B6** | **Non-Certified Scale** | Replaces certified weighing indicator with uncalibrated commercial scale | EU Directive 2014/31/EU NAWI Class III legal metrology binding | Check 2 | ❌ CAUGHT |
-| **B7** | **Software Key Forgery** | Simulates edge gateway using uncertified software OpenSSL key | Microchip ATECC608 Hardware Attestation certificate chain verification | Check 2 | ❌ CAUGHT |
+| **B7** | **Software Key Forgery** | Simulates edge gateway using uncertified software OpenSSL key | Hardware attestation descriptor verification | Check 2 | ❌ CAUGHT |
 | **B8** | **Uncertified Biomass** | Uses timber from illegal clear-cutting without EBC certification | EBC Positive List validation (`EBC-1.1-FOREST`) against pinned manifest registry | Check 8 | ❌ CAUGHT |
 | **B9** | **Numeric Claim Inflation** | Hand-edits declared removal claim from 20.5 tonnes to 25.0 tonnes | Recomputed Stoichiometry: zero-tolerance match with declared `claim.json` | Check 10 | ❌ CAUGHT |
 | **B10** | **Revoked Kiln Gateway** | Re-submits telemetry from compromised or decommissioned gateway | Pinned `--revoked` device list enforcement | Check 2 | ❌ CAUGHT |
+| **B11** | **Private Key in Bundle** | Ships private key inside bundle to enable downstream batch forging | Check 1 zero-tolerance private key rejection on disk and in manifest | Check 1 | ❌ CAUGHT |
+| **B12** | **Rogue Software Device Key** | Generates software keypair without binding to certified device ID | Check 2 public key fingerprint & derived `device_id` match requirement | Check 2 | ❌ CAUGHT |
+| **B13** | **Expired Scale Calibration** | Operates scale after metrological calibration certificate expires | Check 3 dynamic batch timestamp vs `calibration_valid_until` check | Check 3 | ❌ CAUGHT |
+| **B14** | **Double Counting Claim Replay** | Re-seals identical observation batch stream under new `claim_id` | Check 6 auditor claim ledger terminal hash & batch ID deduplication | Check 6 | ❌ CAUGHT |
+| **B15** | **Per-Batch Mass Violation** | Single batch dry output exceeds its own feedstock input mass | Check 9 per-batch mass conservation invariant enforcement | Check 9 | ❌ CAUGHT |
+| **B16** | **Excessive 95% Dry Yield** | Claims 95% dry yield (pyrolysis theoretical max is ~35-40%) | Check 9 methodology parameter max dry yield bound ($\le 40\%$) | Check 9 | ❌ CAUGHT |
 
-### 2.2 Outsider Adversary Matrix (`src/attacks/outsider_attacks.py` — 10/10 Caught)
+### 2.2 Outsider Adversary Matrix (`src/attacks/outsider_attacks.py` — 11/11 Caught)
 
 | ID | Attack Vector | Adversary Action | Cryptographic Defense | Verifier Check | Verdict |
 |:---:|---|---|---|:---:|:---:|
@@ -63,6 +69,7 @@ The architecture is validated against 25 automated adversarial attack vectors ac
 | **O8** | **Path Traversal Injection** | Injects `../../etc/shadow` in manifest file paths | Strict relative path schema validation and jail enforcement | Check 1 | ❌ CAUGHT |
 | **O9** | **Unmanifested File Injection**| Drops backdoor script or extra unmanifested telemetry file | Zero-tolerance directory inventory reconciliation | Check 1 | ❌ CAUGHT |
 | **O10**| **Revoked Gateway Rejection** | Attempts audit verification using compromised device key | Pinned `--revoked` device blacklist enforcement | Check 2 | ❌ CAUGHT |
+| **O11**| **Private Key Injection** | Injects `device_private_key.pem` into bundle directory | Zero-tolerance private key detection in Check 1 | Check 1 | ❌ CAUGHT |
 
 ### 2.3 Insider Corporate Fraud Matrix (`src/attacks/insider_fraud_suite.py` — 5/5 Caught)
 
@@ -71,7 +78,7 @@ The architecture is validated against 25 automated adversarial attack vectors ac
 | **I1** | **Emission Greenwashing** | Swaps grid emission factor to 0.05 and reseals bundle with valid root key | Auditor Pinned Reference Registry (`trusted_references.json`) | Check 8 | ❌ CAUGHT |
 | **I2** | **Dual-Register Shaving** | Lowers interval Wh while running meter totalizer advances | Dual-Register Delta Invariant: $\Delta \text{cumulative\_wh} == \text{interval\_wh}$ | Check 5 | ❌ CAUGHT |
 | **I3** | **Period Truncation** | Drops peak production shifts at shift ends and reseals | Claim Boundary Bounds: declared period timestamps & sequence bounds | Check 6 | ❌ CAUGHT |
-| **I4** | **Software Simulator Key** | Generates software keys to fabricate clean data without hardware | Silicon Hardware Attestation: requires Microchip factory CA cert | Check 2 | ❌ CAUGHT |
+| **I4** | **Software Simulator Key** | Generates software keys to fabricate clean data without hardware | Silicon Hardware Attestation: requires valid attestation descriptor | Check 2 | ❌ CAUGHT |
 | **I5** | **Telemetry Splicing** | Stitches non-consecutive days together across maintenance shut-downs | Sequential Hash-Chain Continuity: `prev_hash` break across splice | Check 4 | ❌ CAUGHT |
 
 ---
@@ -136,3 +143,54 @@ Hardware-secured dMRV must protect the physical-to-digital seam where analog phy
 | **Post-Hoc Spreadsheet / DB Edits** | Yes | **Check 1 Bundle Seal:** Producer Root signature over canonical SHA-256 manifest | eIDAS Qualified Electronic Seal / enterprise PKI trust anchor |
 | **Sensor Cable Disconnection / Spoofing** | Partial | **Direct Cabinet Tapping:** Bypasses SCADA software registers; 2.5 kV galvanic isolation | Armored conduit, locked cabinet, chassis intrusion tamper switches |
 | **End-Use Combustion (BBQ Burning)** | No (factory cannot police customer usage) | **W3C PROV-O Graph:** Lineage tracking downstream to delivery manifest | GPS-tracked tractor spreader telemetry & verified soil application receipts |
+
+---
+
+## 6. Resolved Re-Audit Findings & Residual Threat Surface
+
+Following the October 2026 security re-audit, six proof-of-concept exploits (P1–P6) were verified, hardened, and defended with programmatic regression tests:
+
+### 6.1 Resolved Security Findings (P1–P6)
+
+1. **P1: Device Private Key in Bundle (Key Hygiene):**
+   * *Vulnerability:* Edge simulators previously left device private keys in the claim bundle directory, allowing adversaries possessing the bundle to forge observations.
+   * *Resolution:* Device private keys are strictly generated and stored externally in `src/device_simulator/keys/`. Verifier Check 1 scans both manifest paths and directory tree to fail-closed on any key material matching `*private*` or `*.key`.
+
+2. **P2: Rogue Software Device Key (Identity Binding):**
+   * *Vulnerability:* Device public keys in `device/public_key.pem` were not cryptographically bound to the signed device certificate, allowing rogue software keypairs to pass if the cert was left untouched.
+   * *Resolution:* Check 2 strictly verifies that `cert_body.device_public_key == actual_pub_pem` and validates that `device_id` matches the SHA-256 derivation over the public key.
+
+3. **P3: Expired Metrological Calibration (Scale & Thermocouple):**
+   * *Vulnerability:* Calibration validity was checked against a static constant rather than observation timestamps.
+   * *Resolution:* Checks 2 & 3 dynamically enforce that every batch's `timestamp_end <= calibration_valid_until` for both NAWI weighing indicators and thermocouple transmitters.
+
+4. **P4: Cross-Claim Double Counting (Batch & Terminal Hash Replay):**
+   * *Vulnerability:* Valid signed batches could be re-sealed under a new `claim_id` and pass offline verification.
+   * *Resolution:* Verifier supports `--claim-ledger <path>` and `--record-ledger`. Check 6 verifies against the auditor's local claim ledger, detecting any prior claim claiming the same batch IDs or terminal hash.
+
+5. **P5: Per-Batch Mass Conservation Violation:**
+   * *Vulnerability:* Mass balance was evaluated only on aggregate totals, permitting individual batches to output more dry biochar than their individual feedstock input.
+   * *Resolution:* Check 9 evaluates per-batch mass conservation, enforcing that each batch's dry output does not exceed its feedstock input.
+
+6. **P6: Physically Implausible Dry Yield Bound:**
+   * *Vulnerability:* The mathematical bound $M_{\text{dry}} \le M_{\text{feedstock}}$ permitted physically impossible yields (e.g. 95% dry biochar yield from woody biomass).
+   * *Resolution:* Check 9 integrates auditor-controlled `methodology_parameters.biochar_max_dry_yield_bps` (default 4000 bps / 40.00%), enforcing statutory and thermodynamic pyrolysis yield limits.
+
+### 6.2 Residual Security Risks & Planned Milestone Mitigations
+
+1. **Hardware Attestation Stub (Simulated Mode):**
+   * *Current State:* Edge simulators produce a hardware attestation descriptor with `"attestation_mode": "SIMULATED_STUB"`. Verifier Check 2 validates the hash of the device public key and issues an audit warning that the manufacturer certificate chain is unverified.
+   * *Mitigation Plan:* Full x509 manufacturer certificate chain verification anchored to Microchip Factory Root CA will be delivered in **Milestone 2** with physical ATECC608 silicon hardware.
+
+2. **Tail Truncation Without External Timestamp Authority:**
+   * *Current State:* An unbroken hash-chain prevents dropping middle records or altering history, but an insider holding the Root Key could truncate the latest batches before sealing unless `--expected-count` or `--prev-terminal-hash` is provided to the verifier.
+   * *Mitigation Plan:* Milestone 1 and 2 integrate RFC 3161 Timestamp Authorities (TSA) or public transparency logs (e.g., Sigstore/Rekor) to provide external chronological commitments for terminal hashes.
+
+3. **Deterministic Canonicalization Prototype:**
+   * *Current State:* The Python prototype enforces deterministic key sorting (`json.dumps(sort_keys=True, separators=(',', ':'))`) and strict integer math (grams, microvolts, bps, Wh).
+   * *Mitigation Plan:* Full RFC 8785 JSON Canonicalization Scheme (JCS) is scheduled for **Milestone 1** to guarantee bit-for-bit parity with the Milestone 3 zero-dependency Rust verifier.
+
+4. **Auditor Claim Ledger Scope:**
+   * *Current State:* The claim ledger (`--claim-ledger`) maintains local auditor state to prevent cross-claim double counting within a single verifier's purview.
+   * *Mitigation Plan:* Decentralized / cross-registry claim deduplication will be addressed via interoperable public transparency log anchoring.
+

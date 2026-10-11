@@ -16,8 +16,14 @@
     "check10_numeric_reconciliation": "PASSED"
   },
   "errors": [],
+  "warnings": [
+    "No claim ledger supplied: cross-claim double counting not checked.",
+    "Hardware attestation is a simulator stub; manufacturer certificate chain not verified (Milestone 2)."
+  ],
   "audit_findings": {
-    "telemetry_origin_status": "Declared origin verified (Physical sensor & silicon hardware verified)",
+    "telemetry_origin_status": "Declared origin verified (Physical sensor & hardware attestation stub verified)",
+    "hardware_attestation_mode": "SIMULATED_STUB",
+    "openssl_path": "/opt/homebrew/bin/openssl",
     "batch_count": 5,
     "permanence_status": "Permanence conditions verified (T >= 500\u00b0C maintained across all batches)",
     "mass_balance_status": "Mass-balance verified (Physical conservation bounds satisfied)",

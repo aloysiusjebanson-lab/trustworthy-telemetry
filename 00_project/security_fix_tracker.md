@@ -60,9 +60,9 @@ python3 src/attacks/biochar_attacks.py | tail -2          # 10/10 (but see Task 
 | D1 | D: Test harness | Harness asserts baseline PASS + exact failing check; crash ≠ caught | 🔴 | false positives | ✅ |
 | D2 | D | Self-contained fixtures (temp keys, tracked reference data) so suites run on a fresh clone | 🔴 | reviewer breakage | ✅ |
 | D3 | D | Add B11–B16 attack vectors (P1–P6) to `biochar_attacks.py` | 🟠 | regression | ✅ |
-| E1 | E: Release | Refreeze both golden vectors | 🔴 | fresh-clone fail | ⬜ |
-| E2 | E | Fresh-clone end-to-end verification | 🔴 | — | ⬜ |
-| E3 | E | Docs honesty pass (README, threat model, hardening tracker, NLnet draft) | 🟠 | — | ⬜ |
+| E1 | E: Release | Refreeze both golden vectors | 🔴 | fresh-clone fail | ✅ |
+| E2 | E | Fresh-clone end-to-end verification | 🔴 | — | ✅ |
+| E3 | E | Docs honesty pass (README, threat model, hardening tracker, NLnet draft) | 🟠 | — | ✅ |
 
 ---
 
@@ -383,14 +383,14 @@ Update these files so nothing claims more than the code does:
 ---
 
 ## Definition of Done
-- [ ] `poc_exploits.py` → `Result: 0 vulnerable PoC(s)`, exit 0
-- [ ] Fresh-clone script in E2 prints `FRESH CLONE: ALL GREEN`
-- [ ] Suites: biochar 16/16, outsider 11/11, insider 5/5, each starting with a baseline-PASS assertion
-- [ ] `git ls-files | grep -i private` prints nothing
-- [ ] `find biochar_bundle claim_bundle 04_experiments -iname "*private*"` prints nothing
-- [ ] No new pip dependencies: `grep -rhn "^import \|^from " src | sort -u` lists only Python stdlib modules and the project's own modules
-- [ ] README, threat model, spec, hardening tracker and NLnet draft updated (E3)
-- [ ] All ⬜ above are ✅ with Log evidence
+- [x] `poc_exploits.py` → `Result: 0 vulnerable PoC(s)`, exit 0
+- [x] Fresh-clone script in E2 prints `FRESH CLONE: ALL GREEN`
+- [x] Suites: biochar 16/16, outsider 11/11, insider 5/5, each starting with a baseline-PASS assertion
+- [x] `git ls-files | grep -i private` prints nothing
+- [x] `find biochar_bundle claim_bundle 04_experiments -iname "*private*"` prints nothing
+- [x] No new pip dependencies: `grep -rhn "^import \|^from " src | sort -u` lists only Python stdlib modules and the project's own modules
+- [x] README, threat model, spec, hardening tracker and NLnet draft updated (E3)
+- [x] All ⬜ above are ✅ with Log evidence
 
 ---
 
@@ -403,3 +403,4 @@ Update these files so nothing claims more than the code does:
 | 2026-10-11 | Phase B (B1-B4) | Bound device public key to certificate & re-derived device_id; algorithm allowlist & mandatory validity window enforced; attestation key hash checked & labeled as SIMULATED_STUB with audit warnings; sequence strict increment, payload/envelope match, batch_id uniqueness, and monotonic timestamps verified in Check 4; P2 defended in `poc_exploits.py` (4 vulnerable remain); biochar & energy bundles PASS with 10/10 checks. |
 | 2026-10-11 | Phase C (C1-C6) | Dynamic calibration validity vs batch timestamps (C1, P3); MID metrology check in energy profile (C2); methodology parameters (40% max dry yield, 500°C min temp, 1.2t process deduction) and per-batch mass balance (C3, P5, P6); lab type/range validation and sample_batch_ref/feedstock binding (C4); auditor claim ledger with --claim-ledger / --record-ledger against double counting (C5, P4); energy Check 8 loop, trust-anchor requirement, energy Check 6 required fields, unknown profile fail-closed, duplicate JSON keys rejected, openssl path resolved (C6). `poc_exploits.py` passes with 0 vulnerable PoCs (exit 0). |
 | 2026-10-11 | Phase D (D1-D3) | Strict test harness created (`src/attacks/harness.py`: baseline-PASS assertion, exact check matching, verifier crashes counted as test failures); self-contained fixtures created (`src/attacks/fixtures.py`, `mock_edge.py` parameterized, reference data tracked under `04_experiments/reference_data/`); attack suites refactored: `biochar_attacks.py` 16/16 vectors (added B11-B16), `outsider_attacks.py` 11/11 vectors (added O11), `insider_fraud_suite.py` 5/5 vectors. All 32 attack vectors caught. |
+| 2026-10-11 | Phase E (E1-E3) | Refroze both golden vectors (`04_experiments/golden_test_vector_biochar/` and `04_experiments/golden_test_vector/`) with regenerated `expected_audit_verdict.json`; verified zero private keys in `04_experiments/`; updated README.md (32 vectors, B11-B16, O11, ledger, 40% dry yield bound), threat_model.md (resolved P1-P6 and residual risks), evidence_bundle_spec.md (hardened 10-check standard), bulletproof_hardening_tracker.md, and nlnet_application_tracker.md. Fresh-clone end-to-end verification passed (`FRESH CLONE: ALL GREEN`). |

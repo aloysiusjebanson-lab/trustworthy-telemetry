@@ -1,23 +1,23 @@
 {
   "manifest_version": "1.1",
   "bundle_spec": "02_protocol/evidence_bundle_spec.md",
-  "created_at": 1791111420,
-  "claim_id": "claim_device_a06b53a7319f_1791107820_1791111420",
+  "created_at": 1791747112,
+  "claim_id": "claim_device_a06b53a7319f_1791743512_1791747112",
   "files": {
-    "claim.json": "a4c7e577d92b364b1496f8ffea78d35d0a21f334fc662e107127a10055a4311e",
-    "device/device_certificate.json": "ba94aecd4438242d7e770dab1f90ca2fe162787c5ef16d5063902d7a6299cb3f",
-    "device/hardware_attestation.json": "b2dd9fa0d13b4bd9f04301ea22b1481c7cff203033c56cc17a0dab76991bdf7e",
+    "claim.json": "701e8c7321a7bb1fefcf83eae51e66b9755978bd9b324e1b44add7297f73cf20",
+    "device/device_certificate.json": "8f2e397c2314c11aaf406ac67ac5a04a855388bf7640acad0373cdd63a9199f8",
+    "device/hardware_attestation.json": "cda5b1d970afc3f4b3303390ec0bf5cc0267bb36e4fc257a77cfda82637936c9",
     "device/identity.json": "c31c31aed82a88d8545c74e00c7c850d5f11f733803c4ec5c9961a9f66ba38ff",
     "device/public_key.pem": "6b5aa5626e387898563516cd8601cb0cdc2d7a37370eaee80c5ed45ba8ead82e",
-    "observations/observations.ndjson": "12f444bef043e8165782ba2787690466a12711f6c992e49e711dc5dbe60d0959",
-    "provenance/provenance.json": "4223d3b7da17ef726167502b37d76a4065142511b2bafc1e9c9c85ad6e257eab",
+    "observations/observations.ndjson": "3375a9ecd4f488ae6499985d03d660a2f1fb4cbd5da3c430edf96e524e5f5856",
+    "provenance/provenance.json": "582c1c9e088e6ce709b4c3b5d224919c8651f9ed6bef9a9f37c470e0f3e0d5f7",
     "reference_data/emission_factor.csv": "8e6cc7a7359fb935c5bdf236bd193fa996dfb990a40873f719f99ae5d5f69442",
     "reference_data/emission_factor_metadata.json": "7920e3d2d2555808b9fba1e7efb534a83e7708bdcf2e741fb112a9c501d41beb",
-    "transformations/carbon_calculation.json": "a4562f875fba7b19d245458f1b7bcb7d57faa7a8ba1eee80542b4e6c886052af",
-    "transformations/energy_aggregation.json": "9af8db483e4b67114cf90922204a1c49953c76c54f2f801bb3b78bc1289a09b2"
+    "transformations/carbon_calculation.json": "31a272e59560a6a612ae61521581eedd17f7b450832512e8ce7ab76c108eae59",
+    "transformations/energy_aggregation.json": "35124e86ed4fb5c347de0508b5d2e70ae104965e2f734277e93ced76b89a1402"
   },
   "bundle_seal": {
-    "signature": "3045022100ac4900a0aa3c8dd92d59ac7ae5e317651f020e2e5e42e109741057af07fd2d0c0220185a651d58647248cb2acb5fe572846624881b8689b6e95c3611915192630612",
+    "signature": "3045022100ff46d390e44f55223430fb7b5a370bbeb4be4184080c565a76ade215147df1060220310ae3d376aa82ab9df05e6471f611382cdd365196b46c4234f7e7f56a462215",
     "algorithm": "ECDSA_P256_SHA256",
     "signed_content": "canonical_json(files, separators=(',',':'), sort_keys=True)"
   }

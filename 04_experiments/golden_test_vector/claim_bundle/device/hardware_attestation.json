@@ -2,8 +2,10 @@
   "attestation_type": "microchip_atecc608_factory_attestation",
   "chip_serial": "0123A06B53A7319F",
   "device_public_key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgMKNqtRIsiNuQm5+X7qQsKKAVrJd\nyTcW1TiFTkQDCbL+L0EpkrebqG/hNJWpE2OEVkH05yCVYcOlv6RZIvJQUQ==\n-----END PUBLIC KEY-----",
+  "device_public_key_sha256": "a06b53a7319fdad398dc08704dbb0c2c15d94848e710b8076a9e4c87dfa195aa",
   "signer": "Microchip Technology Production Root CA",
   "attestation_status": "verified_hardware_secure_element",
+  "attestation_mode": "SIMULATED_STUB",
   "secure_element_part": "ATECC608A-TNGTLS",
   "features": [
     "hardware_private_key_isolation",
