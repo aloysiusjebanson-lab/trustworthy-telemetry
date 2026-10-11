@@ -7,7 +7,7 @@
 [![Hardware RoT](https://img.shields.io/badge/Hardware_RoT-Microchip_ATECC608-blueviolet.svg)]()
 [![Platform](https://img.shields.io/badge/Platform-macOS_%7C_Linux_%7C_POSIX-lightgrey.svg)]()
 [![Cryptography](https://img.shields.io/badge/Crypto-NIST_P--256_%7C_SHA--256_%7C_RFC_8785-orange.svg)]()
-[![Tests](https://img.shields.io/badge/Adversarial_Tests-25%2F25_Caught-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Adversarial_Tests-32%2F32_Caught-brightgreen.svg)]()
 [![Standards](https://img.shields.io/badge/Standards-EU_CRCF_%7C_CSRD_%7C_W3C_PROV--O-informational.svg)]()
 
 ---
@@ -238,7 +238,7 @@ flowchart LR
   2. **Automatic Moisture Discounting:** When the operator drenches the biochar, composite samples sent to an accredited ISO 17025 laboratory (e.g. an accredited lab) measure an elevated moisture percentage (e.g. 35.00%). This high moisture reading mathematically discounts the gross wet weight back to the exact true dry carbon weight. Water spraying is thus heavily penalized, not rewarded.
   3. **The Inescapable Mass Conservation Trap:** If the operator attempts to cheat the moisture formula by forging the lab report to declare artificially low moisture (e.g. declaring 10.00% moisture while the biochar is actually 35.00% water), the resulting calculated dry biochar mass will mathematically exceed the dry biomass input:
      $$M_{\text{dry}} > M_{\text{feedstock}}$$
-     Because wood pyrolysis has a maximum theoretical yield of 25–35% biochar, creating dry biochar out of thin air violates the first law of thermodynamics ($M_{\text{out}} \le M_{\text{in}}$). Verifier **Check 9** programmatically enforces $M_{\text{dry}} \le M_{\text{feedstock}}$ and fails closed immediately (**Attack B1 Caught**).
+     Because wood pyrolysis has a maximum theoretical yield of 25–35% biochar, creating dry biochar out of thin air violates the first law of thermodynamics ($M_{\text{out}} \le M_{\text{in}}$). Verifier **Check 9** programmatically enforces both aggregate mass conservation ($M_{\text{dry}} \le M_{\text{feedstock}}$) and a **per-batch maximum dry yield bound ($\le 40.00\%$)**, configured via auditor-pinned `methodology_parameters.biochar_max_dry_yield_bps` in `trusted_references.json`. Any batch exceeding 40% dry yield fails closed immediately (**Attacks B1, B15 & B16 Caught**).
 
 ### 2. The "Cold Kiln" Scam & Analog Sensor Spoofing ($T < 500^\circ\text{C}$)
 
@@ -345,8 +345,10 @@ flowchart TD
 3. **Statutory Thermodynamic & Process Invariants:** Enforces physical mass conservation ($M_{\text{dry}} \le M_{\text{feedstock}}$), thermal permanence ($T_{\min} \ge 500^\circ\text{C}$), and dual-register energy deltas ($\Delta \text{cumulative\_wh} == \text{interval\_wh}$).
 4. **Metrological Pedigree Binding:** Cryptographically binds sensor model, NAWI 2014/31/EU / MID 2014/32/EU accuracy class, and factory calibration validity into the signed device certificate.
 5. **Auditor-Pinned Reference Data:** Independent verification against pinned registry digests (`trusted_references.json`), neutralizing insider emission factor or laboratory assay manipulation.
-6. **RFC 8785 Deterministic Canonicalization:** Strict integer accounting (grams, degrees Celsius, basis points, Watt-hours) eliminates cross-platform floating-point drift between Python and Rust.
+6. **Deterministic Canonicalization (RFC 8785 in M1):** Current prototype enforces strict integer accounting (grams, degrees Celsius, basis points, Watt-hours) with deterministic key-sorted JSON; RFC 8785 (JCS) canonicalization will be fully implemented in Milestone 1.
 7. **W3C PROV-O Cryptographic Lineage:** Unbroken provenance graph recording entities, activities, and cryptographic transformations from raw sensor telemetry to final registered claims.
+8. **Auditor Claim Ledger (Double-Counting Defense):** Offline ledger support (`--claim-ledger PATH --record-ledger`) prevents cross-claim replay of batch IDs and terminal hashes across evidence bundles.
+9. **Auditor-Controlled Methodology Parameters:** Top-level `methodology_parameters` in `trusted_references.json` enforce statutory thresholds (e.g. 40% maximum dry yield, 500°C minimum temperature, 1.2 t process deductions) fail-closed.
 
 ---
 
@@ -399,8 +401,11 @@ Expected biochar verifier output:
   * Net Carbon Sequestered    : 20.523166 t CO2 (20523166 g)
 ----------------------------------------------------------------------
 [AUDIT VERDICT: PASSED]
-  Status: Declared origin verified. Permanence verified. Lineage verified.
+  Status: Declared origin verified (Physical sensor & hardware attestation stub verified). Permanence verified. Lineage verified.
   All 10 specification checks passed without exception.
+  Warnings:
+    - [WARNING] No claim ledger supplied: cross-claim double counting not checked.
+    - [WARNING] Hardware attestation is a simulator stub; manufacturer certificate chain not verified (Milestone 2).
 ======================================================================
 ```
 
@@ -421,20 +426,20 @@ python3 src/verifier/verify_bundle.py claim_bundle/ --company-key company_root_p
 
 ## Adversarial Benchmark & Attack Suites
 
-The pipeline includes comprehensive adversarial test suites programmatically asserting fail-closed rejection of **25 distinct fraud vectors**:
+The pipeline includes comprehensive adversarial test suites programmatically asserting fail-closed rejection of **32 distinct fraud vectors**:
 
 ```bash
-# Run biochar pyrolysis dMRV adversary suite (10 attack vectors)
+# Run biochar pyrolysis dMRV adversary suite (16 attack vectors)
 python3 src/attacks/biochar_attacks.py
 
-# Run outsider adversary suite (10 attack vectors)
+# Run outsider adversary suite (11 attack vectors)
 python3 src/attacks/outsider_attacks.py
 
 # Run insider corporate fraud suite (5 attack vectors)
 python3 src/attacks/insider_fraud_suite.py
 ```
 
-### Biochar dMRV Adversary Matrix (10/10 Caught)
+### Biochar dMRV Adversary Matrix (16/16 Caught)
 | ID | Attack Vector | Verifier Defense | Verdict |
 |---|---|---|:---:|
 | **B1** | Water Spraying / Moisture Inflation Fraud | Physical mass-balance conservation invariant ($M_{\text{dry}} \le M_{\text{feedstock}}$) | ❌ Caught |
@@ -443,12 +448,18 @@ python3 src/attacks/insider_fraud_suite.py
 | **B4** | Feedstock Cap Exhaustion (Used > Quota) | Cumulative biomass delivery manifest cap enforcement | ❌ Caught |
 | **B5** | Dropped Batch / Selective Omission | Sequential cryptographic hash-chain continuity (`prev_hash`) | ❌ Caught |
 | **B6** | Non-Certified Scale Indicator | EU Directive 2014/31/EU NAWI legal metrology check | ❌ Caught |
-| **B7** | Software Key without Silicon Attestation | Microchip ATECC608 hardware attestation verification | ❌ Caught |
+| **B7** | Software Key without Silicon Attestation | Hardware attestation descriptor verification | ❌ Caught |
 | **B8** | Uncertified Biomass Source | EBC positive list & pinned manifest registry verification | ❌ Caught |
 | **B9** | Numeric Claim Inflation | Recomputed stoichiometry vs declared claim zero-tolerance match | ❌ Caught |
 | **B10** | Revoked Kiln Gateway Rejection | Pinned `--revoked` device list enforcement | ❌ Caught |
+| **B11** | Private Key File Inside Bundle / Manifest | Check 1 zero-tolerance private key rejection | ❌ Caught |
+| **B12** | Rogue Software Device Key (Cert-Key Binding Break) | Check 2 public key & derived device ID binding | ❌ Caught |
+| **B13** | Scale Calibration Expired Before Batches | Check 3 dynamic NAWI scale calibration temporal check | ❌ Caught |
+| **B14** | Double-Counting Re-issue Under New Claim ID | Check 6 auditor claim ledger double-counting check | ❌ Caught |
+| **B15** | Per-Batch Mass Balance Violation (Dry > Feedstock) | Check 9 per-batch mass conservation enforcement | ❌ Caught |
+| **B16** | Excessive 95% Dry Yield (Pyrolysis Bound) | Check 9 methodology parameter max dry yield bound ($\le 40\%$) | ❌ Caught |
 
-### Outsider Adversary Matrix (10/10 Caught)
+### Outsider Adversary Matrix (11/11 Caught)
 | ID | Attack Vector | Verifier Defense | Verdict |
 |---|---|---|:---:|
 | **O1** | Falsified Reading Value | NIST P-256 ECDSA observation signature failure | ❌ Caught |
@@ -461,6 +472,7 @@ python3 src/attacks/insider_fraud_suite.py
 | **O8** | Path Traversal Injection (`../../`) | Strict relative path schema validation | ❌ Caught |
 | **O9** | Unmanifested File Injection | Zero-tolerance bundle inventory check | ❌ Caught |
 | **O10** | Revoked Gateway Rejection | Pinned `--revoked` device list enforcement | ❌ Caught |
+| **O11** | Private Key Material Inside Bundle | Check 1 zero-tolerance private key rejection | ❌ Caught |
 
 ### Insider Corporate Fraud Matrix (5/5 Caught)
 | ID | Attack Vector | Verifier Defense | Verdict |
@@ -468,7 +480,7 @@ python3 src/attacks/insider_fraud_suite.py
 | **I1** | Emission Factor Greenwashing + Reseal | Auditor pinned reference registry check | ❌ Caught |
 | **I2** | Dual-Register Interval Shaving | Meter register delta consistency check ($\Delta \text{cum} == \text{int}$) | ❌ Caught |
 | **I3** | Period Head/Tail Truncation | Claim declared period boundaries vs audit mandate | ❌ Caught |
-| **I4** | Unattested Software Simulator Key | Silicon hardware attestation chain validation | ❌ Caught |
+| **I4** | Unattested Software Simulator Key | Silicon hardware attestation descriptor validation | ❌ Caught |
 | **I5** | Telemetry Splicing & Re-chaining | Sequential cryptographic hash continuity | ❌ Caught |
 
 ---
@@ -503,7 +515,7 @@ python3 src/verifier/verify_bundle.py \
 │   ├── device_simulator/   # Edge simulators: mock_biochar_edge.py & mock_edge.py
 │   ├── pipeline/           # Lineage generators: biochar_claim_generator.py & claim_generator.py
 │   ├── verifier/           # Modular 10-check zero-trust verifier CLI & trusted registry
-│   └── attacks/            # Biochar (10/10), outsider (10/10), and insider (5/5) test suites
+│   └── attacks/            # Biochar (16/16), outsider (11/11), and insider (5/5) test suites (32 total)
 ├── LICENSE                 # Apache 2.0 Open-Source License
 └── README.md               # Project documentation
 ```

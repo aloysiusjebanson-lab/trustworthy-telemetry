@@ -1,6 +1,6 @@
 {
   "verdict": "PASSED",
-  "bundle": "04_experiments/golden_test_vector/claim_bundle/",
+  "bundle": "04_experiments/golden_test_vector/claim_bundle",
   "company_trust_anchor": "04_experiments/golden_test_vector/company_root_public_key.pem",
   "checks": {
     "check1_manifest_and_seal": "PASSED",
@@ -15,8 +15,14 @@
     "check10_numeric_reconciliation": "PASSED"
   },
   "errors": [],
+  "warnings": [
+    "No claim ledger supplied: cross-claim double counting not checked.",
+    "Hardware attestation is a simulator stub; manufacturer certificate chain not verified (Milestone 2)."
+  ],
   "audit_findings": {
-    "observations_status": "Declared origin verified",
+    "observations_status": "Declared origin verified (Physical sensor & hardware attestation stub verified)",
+    "hardware_attestation_mode": "SIMULATED_STUB",
+    "openssl_path": "/opt/homebrew/bin/openssl",
     "observation_records_count": 5,
     "hash_chain_status": "Unbroken genesis-to-terminal chain verified",
     "reference_factor_status": "Provenance verified against auditor pinned registry",
