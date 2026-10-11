@@ -137,18 +137,18 @@ def generate_simulated_readings(num_intervals=5, base_wh=15420000, interval_wh=2
     return readings
 
 
-def provision_and_simulate(bundle_root="claim_bundle", num_intervals=5):
+def provision_and_simulate(bundle_root="claim_bundle", num_intervals=5, company_keys_dir=".", device_keys_dir="src/device_simulator/keys"):
     print("=" * 65)
     print(" Verifiable Telemetry Engine — Edge Provisioning & Simulation (v1.1)")
     print("=" * 65)
 
     # 1. Company Authority
-    authority = CompanyAuthority(key_dir=".")
+    authority = CompanyAuthority(key_dir=company_keys_dir)
     print(f"[+] Company Root Authority Active : {authority.pub_path}")
 
     # 2. Edge Device Provisioning
     device_dir = os.path.join(bundle_root, "device")
-    edge_device = MockEdgeDevice(bundle_device_dir=device_dir)
+    edge_device = MockEdgeDevice(bundle_device_dir=device_dir, private_key_dir=device_keys_dir)
     meter_id = "meter_main_switchgear_01"
     print(f"[+] Edge Device Provisioned      : {edge_device.device_id}")
 

@@ -57,9 +57,9 @@ python3 src/attacks/biochar_attacks.py | tail -2          # 10/10 (but see Task 
 | C4 | C | Lab value range/type validation + lab ↔ batch binding | 🟡 | defense in depth | ✅ |
 | C5 | C | Auditor claim ledger against double counting | 🟠 | P4 | ✅ |
 | C6 | C | Smaller fixes (energy Check 8 loop, trust-anchor fallback, energy Check 6 optional fields) | 🟢 | hardening | ✅ |
-| D1 | D: Test harness | Harness asserts baseline PASS + exact failing check; crash ≠ caught | 🔴 | false positives | ⬜ |
-| D2 | D | Self-contained fixtures (temp keys, tracked reference data) so suites run on a fresh clone | 🔴 | reviewer breakage | ⬜ |
-| D3 | D | Add B11–B16 attack vectors (P1–P6) to `biochar_attacks.py` | 🟠 | regression | ⬜ |
+| D1 | D: Test harness | Harness asserts baseline PASS + exact failing check; crash ≠ caught | 🔴 | false positives | ✅ |
+| D2 | D | Self-contained fixtures (temp keys, tracked reference data) so suites run on a fresh clone | 🔴 | reviewer breakage | ✅ |
+| D3 | D | Add B11–B16 attack vectors (P1–P6) to `biochar_attacks.py` | 🟠 | regression | ✅ |
 | E1 | E: Release | Refreeze both golden vectors | 🔴 | fresh-clone fail | ⬜ |
 | E2 | E | Fresh-clone end-to-end verification | 🔴 | — | ⬜ |
 | E3 | E | Docs honesty pass (README, threat model, hardening tracker, NLnet draft) | 🟠 | — | ⬜ |
@@ -402,3 +402,4 @@ Update these files so nothing claims more than the code does:
 | 2026-10-11 | Phase A (A1-A3) | Moved device private key to `src/device_simulator/keys/`; verifier Check 1 rejects any private key material in both profiles; `biochar_bundle/` regenerated; lab & feedstock hashes unchanged; P1 defended in `poc_exploits.py` (5 vulnerable remain); 10/10 verifier checks PASS. |
 | 2026-10-11 | Phase B (B1-B4) | Bound device public key to certificate & re-derived device_id; algorithm allowlist & mandatory validity window enforced; attestation key hash checked & labeled as SIMULATED_STUB with audit warnings; sequence strict increment, payload/envelope match, batch_id uniqueness, and monotonic timestamps verified in Check 4; P2 defended in `poc_exploits.py` (4 vulnerable remain); biochar & energy bundles PASS with 10/10 checks. |
 | 2026-10-11 | Phase C (C1-C6) | Dynamic calibration validity vs batch timestamps (C1, P3); MID metrology check in energy profile (C2); methodology parameters (40% max dry yield, 500°C min temp, 1.2t process deduction) and per-batch mass balance (C3, P5, P6); lab type/range validation and sample_batch_ref/feedstock binding (C4); auditor claim ledger with --claim-ledger / --record-ledger against double counting (C5, P4); energy Check 8 loop, trust-anchor requirement, energy Check 6 required fields, unknown profile fail-closed, duplicate JSON keys rejected, openssl path resolved (C6). `poc_exploits.py` passes with 0 vulnerable PoCs (exit 0). |
+| 2026-10-11 | Phase D (D1-D3) | Strict test harness created (`src/attacks/harness.py`: baseline-PASS assertion, exact check matching, verifier crashes counted as test failures); self-contained fixtures created (`src/attacks/fixtures.py`, `mock_edge.py` parameterized, reference data tracked under `04_experiments/reference_data/`); attack suites refactored: `biochar_attacks.py` 16/16 vectors (added B11-B16), `outsider_attacks.py` 11/11 vectors (added O11), `insider_fraud_suite.py` 5/5 vectors. All 32 attack vectors caught. |
