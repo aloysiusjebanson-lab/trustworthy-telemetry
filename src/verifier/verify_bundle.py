@@ -26,6 +26,48 @@ import tempfile
 import argparse
 import hashlib
 import csv
+import shutil
+import time
+
+OPENSSL_BIN = shutil.which("openssl")
+if not OPENSSL_BIN:
+    raise RuntimeError("OpenSSL CLI binary not found in PATH")
+
+def reject_duplicates(ordered_pairs):
+    d = {}
+    for k, v in ordered_pairs:
+        if k in d:
+            raise ValueError(f"Duplicate JSON key: {k}")
+        d[k] = v
+    return d
+
+def safe_json_loads(s):
+    return json.loads(s, object_pairs_hook=reject_duplicates)
+
+def safe_json_load(fp):
+    return safe_json_loads(fp.read())
+
+def load_claim_ledger(ledger_path):
+    if not ledger_path or not os.path.exists(ledger_path):
+        return {"ledger_version": "1.0", "entries": []}
+    with open(ledger_path, "r") as f:
+        data = safe_json_load(f)
+        if "entries" not in data or not isinstance(data["entries"], list):
+            return {"ledger_version": "1.0", "entries": []}
+        return data
+
+def record_to_claim_ledger(ledger_path, entry):
+    ledger_data = load_claim_ledger(ledger_path)
+    entries = ledger_data.get("entries", [])
+    for e in entries:
+        if e.get("claim_id") == entry.get("claim_id") and e.get("terminal_hash") == entry.get("terminal_hash"):
+            return
+    entries.append(entry)
+    ledger_data["entries"] = entries
+    tmp_path = ledger_path + ".tmp"
+    with open(tmp_path, "w") as f:
+        json.dump(ledger_data, f, indent=2)
+    os.replace(tmp_path, ledger_path)
 
 def compute_sha256(filepath):
     """Computes SHA-256 hex digest of a file."""
@@ -55,7 +97,7 @@ def openssl_verify_signature(pubkey_path, data_bytes, sig_hex):
             data_f.flush()
 
             cmd = [
-                "openssl", "dgst", "-sha256",
+                OPENSSL_BIN, "dgst", "-sha256",
                 "-verify", pubkey_path,
                 "-signature", sig_f.name,
                 data_f.name
@@ -99,7 +141,8 @@ def find_forbidden_key_files(bundle_dir):
 
 def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_path,
                           verbose=False, json_mode=False, json_out_path=None,
-                          expected_count=None, prev_terminal_hash=None, revoked=None):
+                          expected_count=None, prev_terminal_hash=None, revoked=None,
+                          claim_ledger=None, record_ledger=False):
     if not json_mode:
         print("=" * 70)
         print(" Independent Offline Verifier — Zero-Trust Biochar dMRV Audit (v1.2)")
@@ -136,8 +179,23 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
     certified_device_id = None
     cert_valid_from = None
     cert_valid_until = None
+    scale_cal_until = None
+    tc_cal_until = None
     attestation_mode = "UNKNOWN"
     device_pubkey_path = os.path.join(bundle_dir, "device", "public_key.pem")
+
+    # Load methodology parameters from trusted registry
+    methodology_params = {}
+    if trusted_registry_path and os.path.exists(trusted_registry_path):
+        try:
+            with open(trusted_registry_path, "r") as rf:
+                reg_doc = safe_json_load(rf)
+                methodology_params = reg_doc.get("methodology_parameters", {})
+        except Exception:
+            pass
+    max_dry_yield_bps = methodology_params.get("biochar_max_dry_yield_bps", 4000)
+    min_temp_c = methodology_params.get("biochar_min_temp_c", 500)
+    process_deductions_g = methodology_params.get("biochar_process_deduction_g", 1200000)
 
     # Parse revocation list
     revocation_set = set()
@@ -160,7 +218,7 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
             audit_errors.append(f"Missing manifest.json in {bundle_dir}")
         else:
             with open(manifest_path, "r") as f:
-                manifest_data = json.load(f)
+                manifest_data = safe_json_load(f)
 
             files_dict = manifest_data.get("files", {})
             seal_info = manifest_data.get("bundle_seal", {})
@@ -231,7 +289,7 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
 
         if os.path.exists(cert_path) and os.path.exists(producer_pubkey_path) and os.path.exists(device_pubkey_path):
             with open(cert_path, "r") as f:
-                cert_doc = json.load(f)
+                cert_doc = safe_json_load(f)
             c_body = cert_doc.get("certificate_body", {})
             c_sig = cert_doc.get("company_signature")
 
@@ -272,14 +330,24 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
             if metrology.get("standard") != "EU_Directive_2014_31_EU_NAWI":
                 audit_errors.append("Device certificate missing legal scale standard EU_Directive_2014_31_EU_NAWI")
                 dev_ok = False
-            if metrology.get("calibration_valid_until", 0) <= 1700000000:
-                audit_errors.append("Scale calibration expired or missing")
+            if metrology.get("accuracy_class") not in {"Class_I", "Class_II", "Class_III"}:
+                audit_errors.append("Scale accuracy class must be Class_I, Class_II, or Class_III")
                 dev_ok = False
+
+            scale_cal = metrology.get("calibration_valid_until")
+            tc_module = c_body.get("thermocouple_module", {})
+            tc_cal = tc_module.get("calibration_valid_until")
+            if type(scale_cal) is not int or type(tc_cal) is not int:
+                audit_errors.append("Scale and thermocouple calibration_valid_until must be valid integers")
+                dev_ok = False
+            else:
+                scale_cal_until = scale_cal
+                tc_cal_until = tc_cal
 
             # Verify Silicon Hardware Attestation (Microchip ATECC608)
             if os.path.exists(attest_path):
                 with open(attest_path, "r") as af:
-                    attest_doc = json.load(af)
+                    attest_doc = safe_json_load(af)
                 attestation_mode = attest_doc.get("attestation_mode", "UNKNOWN")
                 if attest_doc.get("attestation_status") != "SILICON_HARDWARE_VERIFIED":
                     audit_errors.append("Hardware attestation failed: silicon not verified")
@@ -316,7 +384,7 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
             with open(obs_file, "r") as f:
                 for line in f:
                     if line.strip():
-                        obs_records.append(json.loads(line.strip()))
+                        obs_records.append(safe_json_loads(line.strip()))
 
             if not obs_records:
                 obs_ok = False
@@ -351,6 +419,10 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
                     ts_end = payload.get("timestamp_end", 0)
                     if cert_valid_from is None or cert_valid_until is None or ts_start < cert_valid_from or ts_end > cert_valid_until:
                         audit_errors.append(f"Batch {idx+1}: timestamp outside certificate validity window")
+                        obs_ok = False
+
+                    if scale_cal_until is None or tc_cal_until is None or ts_end > scale_cal_until or ts_end > tc_cal_until:
+                        audit_errors.append(f"Batch {idx+1}: scale/thermocouple calibration expired before batch end")
                         obs_ok = False
         else:
             obs_ok = False
@@ -432,14 +504,14 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
         s4 = "PASSED" if results["check4_hash_chain_continuity"] else "FAILED"
         print(f"[Check 4/10] Cryptographic Hash-Chain Continuity         : [{s4}]")
 
-    # 5. Pyrolysis Thermal Permanence Compliance (T >= 500°C)
+    # 5. Pyrolysis Thermal Permanence Compliance (T >= min_temp_c)
     try:
         thermal_ok = True
         for idx, r in enumerate(obs_records):
             p = r.get("payload", {})
             t_min = p.get("temp_min_c", 0)
-            if t_min < 500:
-                audit_errors.append(f"Thermal permanence failure: Batch {idx+1} ({r.get('batch_id')}) min temp {t_min}°C < 500°C statutory threshold")
+            if t_min < min_temp_c:
+                audit_errors.append(f"Thermal permanence failure: Batch {idx+1} ({r.get('batch_id')}) min temp {t_min}°C < {min_temp_c}°C statutory threshold")
                 thermal_ok = False
 
         results["check5_thermal_permanence"] = thermal_ok
@@ -448,15 +520,15 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
 
     if not json_mode:
         s5 = "PASSED" if results["check5_thermal_permanence"] else "FAILED"
-        print(f"[Check 5/10] Pyrolysis Thermal Permanence (T >= 500°C)  : [{s5}]")
+        print(f"[Check 5/10] Pyrolysis Thermal Permanence (T >= {min_temp_c}°C)  : [{s5}]")
 
-    # 6. Claim Period Boundary Bounds Enforcement
+    # 6. Claim Period Boundary Bounds Enforcement & Double-Counting Check
     try:
         claim_path = os.path.join(bundle_dir, "claim.json")
         boundary_ok = True
         if os.path.exists(claim_path):
             with open(claim_path, "r") as cf:
-                claim_data = json.load(cf)
+                claim_data = safe_json_load(cf)
 
             if obs_records:
                 first_seq = obs_records[0].get("sequence")
@@ -486,6 +558,34 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
                     if genesis_in_bundle != prev_terminal_hash:
                         audit_errors.append(f"Inter-bundle hash continuity broken: expected {prev_terminal_hash[:12]}..., got {genesis_in_bundle[:12]}...")
                         boundary_ok = False
+
+                # Double-counting check via auditor claim ledger (C5)
+                if claim_ledger is not None:
+                    try:
+                        ledger_data = load_claim_ledger(claim_ledger)
+                        entries = ledger_data.get("entries", [])
+                        cur_claim_id = claim_data.get("claim_id")
+                        cur_batch_ids = set(r.get("batch_id") for r in obs_records)
+                        for entry in entries:
+                            e_cid = entry.get("claim_id")
+                            e_term = entry.get("terminal_hash")
+                            if e_cid == cur_claim_id:
+                                if e_term != actual_terminal_hash:
+                                    audit_errors.append(f"Double-counting: claim {cur_claim_id} re-used with different terminal hash")
+                                    boundary_ok = False
+                                continue
+                            if e_term == actual_terminal_hash:
+                                audit_errors.append(f"Double-counting: terminal hash already claimed in {e_cid}")
+                                boundary_ok = False
+                            for bid in entry.get("batch_ids", []):
+                                if bid in cur_batch_ids:
+                                    audit_errors.append(f"Double-counting: batch {bid} already claimed in {e_cid}")
+                                    boundary_ok = False
+                    except Exception as e:
+                        audit_errors.append(f"Claim ledger check failed: {e}")
+                        boundary_ok = False
+                else:
+                    audit_warnings.append("No claim ledger supplied: cross-claim double counting not checked.")
             else:
                 boundary_ok = False
         else:
@@ -509,7 +609,7 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
 
         if os.path.exists(prov_file) and os.path.exists(mb_file) and os.path.exists(cc_file):
             with open(prov_file, "r") as pf:
-                prov_data = json.load(pf)
+                prov_data = safe_json_load(pf)
             entities = prov_data.get("entity", {})
             for entity_id, entity_info in entities.items():
                 expected_sha = entity_info.get("sha256")
@@ -548,7 +648,7 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
             act_feed_hash = compute_sha256(feed_file)
 
             with open(trusted_registry_path, "r") as rf:
-                reg_data = json.load(rf)
+                reg_data = safe_json_load(rf)
             datasets = reg_data.get("datasets", {})
 
             if act_lab_hash not in datasets:
@@ -556,14 +656,14 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
                 ref_ok = False
             else:
                 with open(lab_file, "r") as lf:
-                    lab_analysis = json.load(lf)
+                    lab_analysis = safe_json_load(lf)
 
             if act_feed_hash not in datasets:
                 audit_errors.append(f"Security: Feedstock manifest hash ({act_feed_hash[:16]}...) is NOT in auditor's pinned registry! Uncertified biomass.")
                 ref_ok = False
             else:
                 with open(feed_file, "r") as ff:
-                    feedstock_manifest = json.load(ff)
+                    feedstock_manifest = safe_json_load(ff)
         else:
             ref_ok = False
             audit_errors.append("Missing reference files or trusted_references.json")
@@ -580,39 +680,84 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
     try:
         recompute_ok = True
         if lab_analysis and feedstock_manifest and obs_records:
-            moisture_bps = lab_analysis.get("moisture_bps", 0)
-            c_org_bps = lab_analysis.get("c_org_bps", 0)
-            perm_bps = lab_analysis.get("permanence_factor_bps", 0)
+            # C4 validation: Lab values type and range
+            moisture_bps = lab_analysis.get("moisture_bps")
+            c_org_bps = lab_analysis.get("c_org_bps")
+            perm_bps = lab_analysis.get("permanence_factor_bps")
 
-            total_wet_mass_g = sum(r["payload"]["scale_wet_mass_g"] for r in obs_records)
-            total_feedstock_input_g = sum(r["payload"]["feedstock_input_g"] for r in obs_records)
+            for k_name, val in [("moisture_bps", moisture_bps), ("c_org_bps", c_org_bps), ("permanence_factor_bps", perm_bps)]:
+                if type(val) is not int or not (0 <= val <= 10000):
+                    audit_errors.append(f"Lab analysis {k_name} must be integer between 0 and 10000, got {val}")
+                    recompute_ok = False
 
-            # Invariant 1: Calculate Net Dry Mass: M_dry = M_wet * (10000 - moisture_bps) // 10000
-            batch_dry_masses = [
-                r["payload"]["scale_wet_mass_g"] * (10000 - moisture_bps) // 10000
-                for r in obs_records
-            ]
-            recomputed_dry_mass_g = sum(batch_dry_masses)
-
-            # Invariant 2: Physical Conservation (Dry biochar <= Dry feedstock input)
-            if recomputed_dry_mass_g > total_feedstock_input_g:
-                audit_errors.append(f"Mass-balance violation: Dry biochar ({recomputed_dry_mass_g}g) > Feedstock input ({total_feedstock_input_g}g)")
+            # C4 validation: Lab binding to sample batches
+            first_b_id = obs_records[0].get("batch_id")
+            last_b_id = obs_records[-1].get("batch_id")
+            expected_sample_ref = f"{first_b_id}_to_{last_b_id}"
+            if lab_analysis.get("sample_batch_ref") != expected_sample_ref:
+                audit_errors.append(f"Lab analysis sample_batch_ref ({lab_analysis.get('sample_batch_ref')}) does not match batch sequence ({expected_sample_ref})")
                 recompute_ok = False
 
-            # Invariant 3: Cumulative Feedstock Cap (Used <= Delivered)
-            delivered_cap_g = feedstock_manifest.get("delivered_mass_total_g", 0)
-            if total_feedstock_input_g > delivered_cap_g:
-                audit_errors.append(f"Feedstock cap violation: Total used ({total_feedstock_input_g}g) > Delivered ({delivered_cap_g}g)")
-                recompute_ok = False
+            # C4 validation: Feedstock binding and batch payload value checks
+            delivery_ref = feedstock_manifest.get("delivery_ref")
+            for idx, r in enumerate(obs_records):
+                p = r.get("payload", {})
+                w_g = p.get("scale_wet_mass_g")
+                f_g = p.get("feedstock_input_g")
+                t_m = p.get("temp_min_c")
+                b_id = r.get("batch_id")
 
-            # Invariant 4: EU CRCF / Puro Formula Net Carbon Removal
-            # Gross = (M_dry * C_org * F_perm * 44) // (10000 * 10000 * 12)
-            recomputed_gross_co2_g = (recomputed_dry_mass_g * c_org_bps * perm_bps * 44) // (10000 * 10000 * 12)
-            process_deductions_g = 1200000  # Statutory process deduction
-            recomputed_net_co2_g = recomputed_gross_co2_g - process_deductions_g
-            recomputed_net_tonnes = recomputed_net_co2_g / 1000000.0
+                if type(w_g) is not int or w_g <= 0:
+                    audit_errors.append(f"Batch {idx+1} ({b_id}): scale_wet_mass_g must be positive integer, got {w_g}")
+                    recompute_ok = False
+                if type(f_g) is not int or f_g <= 0:
+                    audit_errors.append(f"Batch {idx+1} ({b_id}): feedstock_input_g must be positive integer, got {f_g}")
+                    recompute_ok = False
+                if type(t_m) not in (int, float) or type(t_m) is bool:
+                    audit_errors.append(f"Batch {idx+1} ({b_id}): temp_min_c must be numeric, got {t_m}")
+                    recompute_ok = False
+                if p.get("feedstock_delivery_ref") != delivery_ref:
+                    audit_errors.append(f"Batch {idx+1} ({b_id}): feedstock_delivery_ref mismatch with feedstock manifest ({delivery_ref})")
+                    recompute_ok = False
+
+            if recompute_ok:
+                total_wet_mass_g = sum(r["payload"]["scale_wet_mass_g"] for r in obs_records)
+                total_feedstock_input_g = sum(r["payload"]["feedstock_input_g"] for r in obs_records)
+
+                # Invariant 1: Per-batch dry mass and maximum dry yield bound (C3)
+                batch_dry_masses = []
+                for idx, r in enumerate(obs_records):
+                    p = r["payload"]
+                    w_i = p["scale_wet_mass_g"]
+                    f_i = p["feedstock_input_g"]
+                    dry_i = w_i * (10000 - moisture_bps) // 10000
+                    batch_dry_masses.append(dry_i)
+                    if dry_i * 10000 > f_i * max_dry_yield_bps:
+                        batch_yield_bps = (dry_i * 10000) // f_i
+                        audit_errors.append(f"Batch {idx+1}: dry yield {batch_yield_bps} bps exceeds max {max_dry_yield_bps} bps")
+                        recompute_ok = False
+
+                recomputed_dry_mass_g = sum(batch_dry_masses)
+
+                # Invariant 2: Physical Conservation (Dry biochar <= Dry feedstock input)
+                if recomputed_dry_mass_g > total_feedstock_input_g:
+                    audit_errors.append(f"Mass-balance violation: Dry biochar ({recomputed_dry_mass_g}g) > Feedstock input ({total_feedstock_input_g}g)")
+                    recompute_ok = False
+
+                # Invariant 3: Cumulative Feedstock Cap (Used <= Delivered)
+                delivered_cap_g = feedstock_manifest.get("delivered_mass_total_g", 0)
+                if total_feedstock_input_g > delivered_cap_g:
+                    audit_errors.append(f"Feedstock cap violation: Total used ({total_feedstock_input_g}g) > Delivered ({delivered_cap_g}g)")
+                    recompute_ok = False
+
+                # Invariant 4: EU CRCF / Puro Formula Net Carbon Removal (Integer Math)
+                # Gross = (M_dry * C_org * F_perm * 44) // (10000 * 10000 * 12)
+                recomputed_gross_co2_g = (recomputed_dry_mass_g * c_org_bps * perm_bps * 44) // (10000 * 10000 * 12)
+                recomputed_net_co2_g = recomputed_gross_co2_g - process_deductions_g
+                recomputed_net_tonnes = recomputed_net_co2_g / 1000000.0
         else:
             recompute_ok = False
+            audit_errors.append("Missing lab_analysis, feedstock_manifest, or observations for recomputation")
 
         results["check9_independent_recomputation"] = recompute_ok
     except Exception as e:
@@ -665,8 +810,9 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
         "audit_findings": {
             "telemetry_origin_status": origin_msg,
             "hardware_attestation_mode": attestation_mode,
+            "openssl_path": OPENSSL_BIN,
             "batch_count": len(obs_records),
-            "permanence_status": "Permanence conditions verified (T >= 500°C maintained across all batches)",
+            "permanence_status": f"Permanence conditions verified (T >= {min_temp_c}°C maintained across all batches)",
             "mass_balance_status": "Mass-balance verified (Physical conservation bounds satisfied)",
             "recomputed_dry_biochar_tonnes": recomputed_dry_mass_g / 1000000.0,
             "recomputed_net_co2_removed_tonnes": recomputed_net_tonnes,
@@ -674,12 +820,23 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
         }
     }
 
+    # Record to claim ledger if requested and verification passed
+    if all_passed and record_ledger and claim_ledger:
+        record_to_claim_ledger(claim_ledger, {
+            "claim_id": claim_data.get("claim_id") if claim_data else "unknown",
+            "profile": "biochar_pyrolysis",
+            "device_id": certified_device_id,
+            "batch_ids": [r.get("batch_id") for r in obs_records],
+            "terminal_hash": claim_data.get("terminal_hash") if claim_data else "unknown",
+            "recorded_at": int(time.time())
+        })
+
     if not json_mode:
         print("-" * 70)
         print(" FORMAL AUDIT VERIFICATION SUMMARY (EU CRCF / PURO.EARTH)")
         print("-" * 70)
         print(f"  * Batches Ingested          : {len(obs_records)} batches (Unbroken hash-chain)")
-        print(f"  * Thermal Permanence        : Confirmed (All batches >= 500°C)")
+        print(f"  * Thermal Permanence        : Confirmed (All batches >= {min_temp_c}°C)")
         print(f"  * Mass Balance Proof        : Net Dry Biochar = {recomputed_dry_mass_g / 1000000.0:.3f} tonnes")
         print(f"  * Net Carbon Sequestered    : {recomputed_net_tonnes:.6f} t CO2 ({recomputed_net_co2_g} g)")
         print("-" * 70)
@@ -723,7 +880,8 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
 
 def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=None,
                          verbose=False, json_mode=False, json_out_path=None,
-                         expected_count=None, prev_terminal_hash=None, revoked=None):
+                         expected_count=None, prev_terminal_hash=None, revoked=None,
+                         claim_ledger=None, record_ledger=False):
     if not json_mode:
         print("=" * 70)
         print(" Independent Offline Verifier — Zero-Trust Claim Audit (v1.1)")
@@ -773,6 +931,7 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
     certified_device_id = None
     cert_valid_from = None
     cert_valid_until = None
+    energy_cal_until = None
     attestation_mode = "UNKNOWN"
     device_pubkey_path = os.path.join(bundle_dir, "device", "public_key.pem")
 
@@ -791,7 +950,7 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
             audit_errors.append("Missing manifest.json or checksums.txt")
         else:
             with open(manifest_path, "r") as f:
-                manifest = json.load(f)
+                manifest = safe_json_load(f)
 
             manifest_files = manifest.get("files", {})
             all_files_ok = True
@@ -863,7 +1022,7 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
 
         if os.path.exists(device_cert_path) and os.path.exists(company_pubkey_path) and os.path.exists(device_pubkey_path):
             with open(device_cert_path, "r") as f:
-                cert_data = json.load(f)
+                cert_data = safe_json_load(f)
             if cert_data.get("algorithm") != "ECDSA_P256_SHA256":
                 audit_errors.append(f"Untrusted certificate algorithm: {cert_data.get('algorithm')}")
             cert_body = cert_data.get("certificate_body", {})
@@ -886,10 +1045,26 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
                             # 2b. Re-derive device_id from public key: sha256(pubkey)[:12]
                             derived_id = "device_" + hashlib.sha256(actual_pub_pem.encode('utf-8')).hexdigest()[:12]
                             if derived_id == certified_device_id:
+                                # Metrology check (MID 2014/32/EU - C2)
+                                metrology = cert_body.get("metrology", {})
+                                metrology_ok = True
+                                if metrology.get("standard") != "MID_2014_32_EU":
+                                    audit_errors.append("Meter metrology standard must be MID_2014_32_EU")
+                                    metrology_ok = False
+                                if metrology.get("accuracy_class") not in {"Class_A_EN50470", "Class_B_EN50470", "Class_C_EN50470"}:
+                                    audit_errors.append("Meter accuracy class must be Class_A_EN50470, Class_B_EN50470, or Class_C_EN50470")
+                                    metrology_ok = False
+                                cal_until = metrology.get("calibration_valid_until")
+                                if type(cal_until) is not int:
+                                    audit_errors.append("Meter calibration_valid_until must be an integer")
+                                    metrology_ok = False
+                                else:
+                                    energy_cal_until = cal_until
+
                                 # 2c. Check hardware secure element attestation
                                 if os.path.exists(attestation_path):
                                     with open(attestation_path, "r") as af:
-                                        att_data = json.load(af)
+                                        att_data = safe_json_load(af)
                                     attestation_mode = att_data.get("attestation_mode", "UNKNOWN")
                                     att_status_ok = att_data.get("attestation_status") == "verified_hardware_secure_element"
                                     if not att_status_ok:
@@ -897,7 +1072,7 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
                                     expected_key_hash = hashlib.sha256(actual_pub_pem.encode('utf-8')).hexdigest()
                                     if att_data.get("device_public_key_sha256") != expected_key_hash:
                                         audit_errors.append("Hardware attestation key hash mismatch with device public key")
-                                    elif att_status_ok and cert_data.get("algorithm") == "ECDSA_P256_SHA256":
+                                    elif att_status_ok and cert_data.get("algorithm") == "ECDSA_P256_SHA256" and metrology_ok:
                                         cert_ok = True
                                 else:
                                     audit_errors.append("Missing hardware_attestation.json")
@@ -931,7 +1106,7 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
                 for line_no, line in enumerate(f, 1):
                     if not line.strip():
                         continue
-                    rec = json.loads(line)
+                    rec = safe_json_loads(line)
                     raw_envelopes.append(rec)
                     obs_device_id = rec.get("device_id")
                     payload = rec.get("payload", {})
@@ -955,6 +1130,11 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
                         if ts is None or ts < cert_valid_from or ts > cert_valid_until:
                             audit_errors.append(f"Observation #{line_no} timestamp outside certificate validity window")
                             obs_sigs_ok = False
+
+                    # Metrology calibration validity check (C2)
+                    if energy_cal_until is None or ts is None or ts > energy_cal_until:
+                        audit_errors.append(f"Observation #{line_no} timestamp exceeds meter calibration validity window")
+                        obs_sigs_ok = False
 
                     # Verify signature over canonical payload
                     canonical_payload_bytes = canonical_json_bytes(payload)
@@ -1063,7 +1243,7 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
         print(f"[Check 5/10] Sequence Continuity & Dual Registers   : [{s5}]")
 
     # -------------------------------------------------------------
-    # Check 6: Claim Boundary Bounding Enforcement
+    # Check 6: Claim Boundary Bounding Enforcement & Double-Counting
     # -------------------------------------------------------------
     try:
         boundary_ok = True
@@ -1072,9 +1252,9 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
 
         if os.path.exists(claim_file) and os.path.exists(trans_energy_file):
             with open(claim_file, "r") as f:
-                claim_data = json.load(f)
+                claim_data = safe_json_load(f)
             with open(trans_energy_file, "r") as f:
-                t_energy = json.load(f)
+                t_energy = safe_json_load(f)
 
             rep_period = claim_data.get("reporting_period", {})
             declared_first_seq = rep_period.get("first_sequence")
@@ -1088,6 +1268,15 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
             actual_count = len(obs_records)
             actual_start_ts = obs_records[0].get("timestamp") if obs_records else None
             actual_end_ts = obs_records[-1].get("timestamp") if obs_records else None
+
+            # Required reporting_period fields (C6.3)
+            if any(v is None for v in [declared_first_seq, declared_last_seq, declared_count, declared_start_ts, declared_end_ts]):
+                audit_errors.append("Reporting period missing required fields (first_sequence, last_sequence, record_count, start_timestamp, end_timestamp)")
+                boundary_ok = False
+
+            if claim_data.get("device_id") != certified_device_id:
+                audit_errors.append(f"Claim device_id ({claim_data.get('device_id')}) != certified device_id ({certified_device_id})")
+                boundary_ok = False
 
             if declared_first_seq is not None and declared_first_seq != actual_first_seq:
                 audit_errors.append(f"Boundary: declared first sequence ({declared_first_seq}) != actual ({actual_first_seq})")
@@ -1122,6 +1311,34 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
             if trans_terminal and trans_terminal != terminal_envelope_hash:
                 audit_errors.append("Terminal hash in energy aggregation does not match observation hash-chain")
                 boundary_ok = False
+
+            # Double-counting check via claim ledger (C5)
+            if claim_ledger is not None:
+                try:
+                    ledger_data = load_claim_ledger(claim_ledger)
+                    entries = ledger_data.get("entries", [])
+                    cur_claim_id = claim_data.get("claim_id")
+                    cur_seqs = set(f"{certified_device_id}:{r.get('sequence')}" for r in obs_records)
+                    for entry in entries:
+                        e_cid = entry.get("claim_id")
+                        e_term = entry.get("terminal_hash")
+                        if e_cid == cur_claim_id:
+                            if e_term != terminal_envelope_hash:
+                                audit_errors.append(f"Double-counting: claim {cur_claim_id} re-used with different terminal hash")
+                                boundary_ok = False
+                            continue
+                        if e_term == terminal_envelope_hash:
+                            audit_errors.append(f"Double-counting: terminal hash already claimed in {e_cid}")
+                            boundary_ok = False
+                        for s in entry.get("sequences", []):
+                            if s in cur_seqs:
+                                audit_errors.append(f"Double-counting: sequence {s} already claimed in {e_cid}")
+                                boundary_ok = False
+                except Exception as e:
+                    audit_errors.append(f"Claim ledger check failed: {e}")
+                    boundary_ok = False
+            else:
+                audit_warnings.append("No claim ledger supplied: cross-claim double counting not checked.")
         else:
             boundary_ok = False
             audit_errors.append("Missing claim.json or energy_aggregation.json for boundary check")
@@ -1144,7 +1361,7 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
 
         if os.path.exists(trans_carbon_file) and os.path.exists(prov_file) and t_energy is not None:
             with open(trans_carbon_file, "r") as f:
-                t_carbon = json.load(f)
+                t_carbon = safe_json_load(f)
 
             actual_obs_hash = compute_sha256(obs_file)
             if t_energy.get("input_observations_sha256") != actual_obs_hash:
@@ -1164,7 +1381,7 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
 
             # Verify W3C PROV-O entity hashes
             with open(prov_file, "r") as pf:
-                prov_data = json.load(pf)
+                prov_data = safe_json_load(pf)
             entities = prov_data.get("entity", {})
             for entity_id, entity_info in entities.items():
                 expected_sha = entity_info.get("sha256")
@@ -1200,7 +1417,7 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
             actual_csv_hash = compute_sha256(ref_csv_file)
 
             with open(trusted_registry_path, "r") as rf:
-                registry = json.load(rf)
+                registry = safe_json_load(rf)
             datasets = registry.get("datasets", {})
 
             # Zero-Trust: Dataset MUST be registered in the Auditor's Pinned Registry
@@ -1208,16 +1425,19 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
                 pinned_meta = datasets[actual_csv_hash]
                 pinned_factor = float(pinned_meta.get("kg_co2e_per_unit", 0))
 
-                # Verify bundled CSV values match pinned authority
+                # Verify bundled CSV values match pinned authority (all rows must match - C6.1)
                 with open(ref_csv_file, "r") as f:
-                    reader = csv.DictReader(f)
-                    for row in reader:
-                        csv_val = float(row.get("kg_co2e_per_unit", -1))
-                        if abs(csv_val - pinned_factor) < 1e-6:
-                            ref_ok = True
-                            break
-                        else:
-                            audit_errors.append(f"Bundled CSV factor ({csv_val}) != pinned authority ({pinned_factor})")
+                    reader = list(csv.DictReader(f))
+                    if not reader:
+                        audit_errors.append("Bundled CSV has no data rows")
+                        ref_ok = False
+                    else:
+                        ref_ok = True
+                        for row in reader:
+                            csv_val = float(row.get("kg_co2e_per_unit", -1))
+                            if abs(csv_val - pinned_factor) >= 1e-6:
+                                audit_errors.append(f"Bundled CSV factor ({csv_val}) != pinned authority ({pinned_factor})")
+                                ref_ok = False
             else:
                 audit_errors.append(f"Security: Bundled emission factor hash ({actual_csv_hash[:16]}...) is NOT in auditor's pinned registry! Potential greenwashing.")
         else:
@@ -1310,6 +1530,7 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
         "audit_findings": {
             "observations_status": origin_msg,
             "hardware_attestation_mode": attestation_mode,
+            "openssl_path": OPENSSL_BIN,
             "observation_records_count": len(obs_records),
             "hash_chain_status": "Unbroken genesis-to-terminal chain verified" if results["check4_hash_chain_continuity"] else "Broken",
             "reference_factor_status": "Provenance verified against auditor pinned registry",
@@ -1320,6 +1541,17 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
             "lineage_status": "Calculation lineage verified" if results["check7_transformations_and_provenance"] else "Lineage verification failed"
         }
     }
+
+    # Record to claim ledger if requested and verification passed
+    if all_passed and record_ledger and claim_ledger:
+        record_to_claim_ledger(claim_ledger, {
+            "claim_id": claim_data.get("claim_id") if claim_data else "unknown",
+            "profile": "energy_submetering",
+            "device_id": certified_device_id,
+            "sequences": [f"{certified_device_id}:{r.get('sequence')}" for r in obs_records],
+            "terminal_hash": terminal_envelope_hash,
+            "recorded_at": int(time.time())
+        })
 
     if not json_mode:
         print("-" * 70)
@@ -1369,42 +1601,65 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
 
 def verify_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=None,
                   verbose=False, json_mode=False, json_out_path=None,
-                  expected_count=None, prev_terminal_hash=None, revoked=None, profile=None):
-    claim_path = os.path.join(bundle_dir, "claim.json")
-    detected_profile = profile
+                  expected_count=None, prev_terminal_hash=None, revoked=None, profile=None,
+                  claim_ledger=None, record_ledger=False):
+    # Enforce trust anchor presence (C6.2: no silent fallback)
+    if not company_pubkey_path or not os.path.exists(company_pubkey_path):
+        err = f"Error: Trust anchor key file not found: {company_pubkey_path}. Specify via --company-key."
+        if json_mode:
+            print(json.dumps({"verdict": "FAILED", "errors": [err]}, indent=2))
+        else:
+            print(f"[!] {err}")
+        return False
 
+    claim_path = os.path.join(bundle_dir, "claim.json")
+    manifest_path = os.path.join(bundle_dir, "manifest.json")
+    manifest_profile = None
+    if os.path.exists(manifest_path):
+        try:
+            with open(manifest_path, "r") as mf:
+                m_data = safe_json_load(mf)
+                manifest_profile = m_data.get("profile")
+        except Exception:
+            pass
+
+    detected_profile = profile
     if detected_profile is None and os.path.exists(claim_path):
         try:
             with open(claim_path, "r") as cf:
-                c_data = json.load(cf)
+                c_data = safe_json_load(cf)
             detected_profile = c_data.get("profile")
         except Exception:
             pass
 
-    if detected_profile == "biochar_pyrolysis":
-        # Resolve trust anchor for biochar
-        root_key = company_pubkey_path
-        if root_key == "company_root_public_key.pem" and not os.path.exists(root_key):
-            if os.path.exists("producer_root_public_key.pem"):
-                root_key = "producer_root_public_key.pem"
-        if trusted_registry_path is None:
-            base_script_dir = os.path.dirname(os.path.abspath(__file__))
-            trusted_registry_path = os.path.join(base_script_dir, "trusted_references.json")
+    if detected_profile is None:
+        if manifest_profile is None or manifest_profile == "energy_submetering":
+            detected_profile = "energy_submetering"
+        else:
+            detected_profile = manifest_profile
 
-        return verify_biochar_bundle(bundle_dir, root_key, trusted_registry_path,
+    if detected_profile not in ("biochar_pyrolysis", "energy_submetering"):
+        err = f"Error: Unknown or unsupported profile: {detected_profile}"
+        if json_mode:
+            print(json.dumps({"verdict": "FAILED", "errors": [err]}, indent=2))
+        else:
+            print(f"[!] {err}")
+        return False
+
+    if trusted_registry_path is None:
+        base_script_dir = os.path.dirname(os.path.abspath(__file__))
+        trusted_registry_path = os.path.join(base_script_dir, "trusted_references.json")
+
+    if detected_profile == "biochar_pyrolysis":
+        return verify_biochar_bundle(bundle_dir, company_pubkey_path, trusted_registry_path,
                                      verbose=verbose, json_mode=json_mode, json_out_path=json_out_path,
                                      expected_count=expected_count, prev_terminal_hash=prev_terminal_hash,
-                                     revoked=revoked)
+                                     revoked=revoked, claim_ledger=claim_ledger, record_ledger=record_ledger)
     else:
-        # Default to energy_submetering
-        if trusted_registry_path is None:
-            base_script_dir = os.path.dirname(os.path.abspath(__file__))
-            trusted_registry_path = os.path.join(base_script_dir, "trusted_references.json")
-
         return verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path,
                                     verbose=verbose, json_mode=json_mode, json_out_path=json_out_path,
                                     expected_count=expected_count, prev_terminal_hash=prev_terminal_hash,
-                                    revoked=revoked)
+                                    revoked=revoked, claim_ledger=claim_ledger, record_ledger=record_ledger)
 
 
 def main():
@@ -1416,6 +1671,8 @@ def main():
     parser.add_argument("--prev-terminal-hash", default=None, help="Terminal hash from previous reporting period")
     parser.add_argument("--revoked", default=None, help="Comma-separated device IDs or path to revocation file")
     parser.add_argument("--profile", default=None, help="Force specific profile: biochar_pyrolysis or energy_submetering")
+    parser.add_argument("--claim-ledger", default=None, help="Path to auditor claim ledger against double counting")
+    parser.add_argument("--record-ledger", action="store_true", help="Record verified claim to ledger")
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose diagnostics (display error breakdown)")
     parser.add_argument("--json", action="store_true", help="Output machine-readable JSON audit report")
     parser.add_argument("--json-out", default=None, help="Save machine-readable JSON report to file")
@@ -1424,7 +1681,8 @@ def main():
     success = verify_bundle(args.bundle, args.company_key, trusted_registry_path=args.trusted_registry,
                             verbose=args.verbose, json_mode=args.json, json_out_path=args.json_out,
                             expected_count=args.expected_count, prev_terminal_hash=args.prev_terminal_hash,
-                            revoked=args.revoked, profile=args.profile)
+                            revoked=args.revoked, profile=args.profile,
+                            claim_ledger=args.claim_ledger, record_ledger=args.record_ledger)
     sys.exit(0 if success else 1)
 
 
