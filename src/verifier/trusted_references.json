@@ -2,6 +2,11 @@
   "registry_version": "1.2",
   "maintained_by": "Independent Environmental Audit Authority",
   "updated_at": 1773532800,
+  "methodology_parameters": {
+    "biochar_max_dry_yield_bps": 4000,
+    "biochar_min_temp_c": 500,
+    "biochar_process_deduction_g": 1200000
+  },
   "datasets": {
     "8e6cc7a7359fb935c5bdf236bd193fa996dfb990a40873f719f99ae5d5f69442": {
       "dataset_id": "ispra_it_grid_2026",
