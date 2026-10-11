@@ -164,8 +164,10 @@ def provision_and_simulate(bundle_root="claim_bundle", num_intervals=5):
         "attestation_type": "microchip_atecc608_factory_attestation",
         "chip_serial": f"0123{hashlib.sha256(edge_device.pub_pem.encode()).hexdigest()[:12].upper()}",
         "device_public_key": edge_device.pub_pem.strip(),
+        "device_public_key_sha256": hashlib.sha256(edge_device.pub_pem.strip().encode('utf-8')).hexdigest(),
         "signer": "SIMULATED Manufacturer Root CA (TEST ONLY)",
         "attestation_status": "verified_hardware_secure_element",
+        "attestation_mode": "SIMULATED_STUB",
         "secure_element_part": "ATECC608A-TNGTLS",
         "features": [
             "hardware_private_key_isolation",
