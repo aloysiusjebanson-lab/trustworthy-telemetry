@@ -3,23 +3,22 @@
   "profile": "biochar_pyrolysis",
   "claim_id": "claim_biochar_removal_2026_q3",
   "files": {
-    "claim.json": "9a64f6c890032c069471cf2b1a8aa0c30055dfac8cef50b18d3f2454cb837ce6",
+    "claim.json": "c30640e4a6c2fefae89770913e2d85e993128d1b9d38661e9ea78db407da9db3",
     "transformations/carbon_calculation.json": "736c7a416ab48e46a048513aaf0028c7072470cb9a6b870ed62be7040030f9da",
     "transformations/mass_balance.json": "fc19db2a4b3da65e0a88035e2412ef3a2c5bd9079e1f13fa19af949c160ac8d2",
-    "provenance/provenance.json": "cc4b6776bc87cc45cb4c9f54784d2d8b4776a7cad971008f8efc631ad59aee04",
+    "provenance/provenance.json": "436bbfb055ca49f967e8122a307bbe2150d4acae478a3bc0a2e71222e14aac50",
     "reference_data/feedstock_manifest.json": "b6e8b1049d2041554ba56384e66c55b5b3178cdf2c793ee07075381a9fedf07b",
     "reference_data/lab_analysis.json": "f3706c09cfe73a4b5ab0a8ef3c6205aedd2d85bc6cd797b12d60a0cdebb26281",
     "reference_data/lab_analysis_metadata.json": "4aa21608f381314f87bd554650e31959fcbb74c50fc77d6a6db675aaac890e90",
-    "device/device_certificate.json": "4fcfb083ea8a46f2a48dd869060718149171db48d24f6bd02e60e0a1826a89e9",
-    "device/device_private_key.pem": "b159ccbc03a6a92b245f42985c8fe928a892098afd22e1496da7172d6fd69686",
+    "device/device_certificate.json": "6854379801b32e01711eb53703c01815e6253b6a9ad449df7d87ef2968268bee",
     "device/hardware_attestation.json": "b11630a7b7e4352614e9a74747f23de177457b28ec24599ec87c1edd960f6116",
     "device/identity.json": "c24c6d0ba3cc9758759a2679f29b0b9b2fe80ba72380cc59a47571e44d929ffb",
     "device/public_key.pem": "74351321d282aaa446044d305b770893b6ce28013e6678e7ddbb7adbbd766d92",
-    "observations/observations.ndjson": "a21342a84bbcefd3f94001f6c8261714c15e1324ee6d20354cd0eec1d2173098",
-    "checksums.txt": "da1ca984badd5fdc036e570c79ee12ffc1c46a5180765cfa63e6a08c03084bab"
+    "observations/observations.ndjson": "a7882048ac2d2c0ad61b7fc8154008d5ec352fdfc7c234552a9f29ec9b5ec8b7",
+    "checksums.txt": "7714b7364e3c4b9dccee4ee2451181bd1f0b50badb01a4af187198a7f9ca1be4"
   },
   "bundle_seal": {
-    "signature": "3045022100b191b70dff1281c035173f13cbaa8f721468d2e9cb0f21b51a13e1b445a77bd4022064a105cceef8fc9ad4f718a3b640680ba93e75587e148a0cb52eaf553e3d2040",
+    "signature": "3044022061b742ff5a352ea832b07062250c873adc561f16430a38e01c07ef35f2dc612d0220510fc8623b201659e03f4436c46a0b975f8e3e60f8b8e28ffbee1aafa695a689",
     "algorithm": "ECDSA_P256_SHA256",
     "signed_by": "producer_authority_eu"
   }

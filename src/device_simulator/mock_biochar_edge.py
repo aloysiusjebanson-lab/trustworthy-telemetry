@@ -46,13 +46,22 @@ def ensure_producer_root_keys(keys_dir):
         run_openssl(["openssl", "ec", "-in", root_priv, "-pubout", "-out", root_pub])
     return root_priv, root_pub
 
-def ensure_device_keys(device_dir):
-    dev_priv = os.path.join(device_dir, "device_private_key.pem")
+def ensure_device_keys(device_dir, keys_dir):
+    os.makedirs(keys_dir, exist_ok=True)
+    legacy_priv = os.path.join(device_dir, "device_private_key.pem")
+    dev_priv = os.path.join(keys_dir, "biochar_device_private_key.pem")
     dev_pub = os.path.join(device_dir, "public_key.pem")
-    if not (os.path.exists(dev_priv) and os.path.exists(dev_pub)):
+
+    # Migration: if legacy key in device_dir exists and external does not, move it
+    if os.path.exists(legacy_priv) and not os.path.exists(dev_priv):
+        os.replace(legacy_priv, dev_priv)
+    elif os.path.exists(legacy_priv) and os.path.exists(dev_priv):
+        os.remove(legacy_priv)
+
+    if not os.path.exists(dev_priv):
         run_openssl(["openssl", "ecparam", "-name", "prime256v1", "-genkey", "-noout", "-out", dev_priv])
         os.chmod(dev_priv, 0o600)
-        run_openssl(["openssl", "ec", "-in", dev_priv, "-pubout", "-out", dev_pub])
+    run_openssl(["openssl", "ec", "-in", dev_priv, "-pubout", "-out", dev_pub])
     return dev_priv, dev_pub
 
 def derive_device_id(pub_key_path):
@@ -61,7 +70,7 @@ def derive_device_id(pub_key_path):
     raw_b64 = "".join(lines)
     return f"device_biochar_{hashlib.sha256(raw_b64.encode('utf-8')).hexdigest()[:12]}"
 
-def generate_biochar_telemetry(bundle_root="biochar_bundle", num_batches=5):
+def generate_biochar_telemetry(bundle_root="biochar_bundle", num_batches=5, keys_dir=None, producer_keys_dir=None):
     print("=================================================================")
     print(" Biochar dMRV Hardware Simulator — Edge Gateway Daemon (v1.2)")
     print(" Profile: biochar_pyrolysis | EU CRCF & Puro.earth Standards")
@@ -73,8 +82,13 @@ def generate_biochar_telemetry(bundle_root="biochar_bundle", num_batches=5):
     os.makedirs(obs_dir, exist_ok=True)
     
     project_root = os.path.abspath(os.path.join(bundle_root, ".."))
-    root_priv, root_pub = ensure_producer_root_keys(project_root)
-    dev_priv, dev_pub = ensure_device_keys(device_dir)
+    if producer_keys_dir is None:
+        producer_keys_dir = project_root
+    if keys_dir is None:
+        keys_dir = os.path.join(project_root, "src", "device_simulator", "keys")
+
+    root_priv, root_pub = ensure_producer_root_keys(producer_keys_dir)
+    dev_priv, dev_pub = ensure_device_keys(device_dir, keys_dir)
     
     device_id = derive_device_id(dev_pub)
     print(f"[+] Device ID Derived from Silicon PubKey : {device_id}")
@@ -205,5 +219,11 @@ def generate_biochar_telemetry(bundle_root="biochar_bundle", num_batches=5):
     return records
 
 if __name__ == "__main__":
-    out_dir = sys.argv[1] if len(sys.argv) > 1 else "biochar_bundle"
-    generate_biochar_telemetry(out_dir, 5)
+    import argparse
+    parser = argparse.ArgumentParser(description="Biochar dMRV Hardware Simulator (v1.2)")
+    parser.add_argument("bundle", nargs="?", default="biochar_bundle", help="Output bundle directory")
+    parser.add_argument("--batches", type=int, default=5, help="Number of batches to simulate")
+    parser.add_argument("--keys-dir", default=None, help="Directory to store device private keys")
+    parser.add_argument("--producer-keys-dir", default=None, help="Directory containing producer root keys")
+    args = parser.parse_args()
+    generate_biochar_telemetry(args.bundle, args.batches, keys_dir=args.keys_dir, producer_keys_dir=args.producer_keys_dir)

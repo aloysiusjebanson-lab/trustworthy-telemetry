@@ -74,6 +74,28 @@ def openssl_verify_signature(pubkey_path, data_bytes, sig_hex):
                 except OSError:
                     pass
 
+FORBIDDEN_KEY_SUBSTRINGS = ("private", ".key")
+
+def find_forbidden_key_files(bundle_dir):
+    """Detects any private key material inside the evidence bundle."""
+    hits = []
+    for root, _, files in os.walk(bundle_dir):
+        for f in files:
+            lf = f.lower()
+            full_p = os.path.join(root, f)
+            rel_p = os.path.relpath(full_p, bundle_dir)
+            if any(s in lf for s in FORBIDDEN_KEY_SUBSTRINGS):
+                hits.append(rel_p)
+            elif lf.endswith(".pem"):
+                try:
+                    with open(full_p, "rb") as cf:
+                        content = cf.read(4096)
+                        if b"PRIVATE KEY" in content:
+                            hits.append(rel_p)
+                except Exception:
+                    pass
+    return sorted(hits)
+
 
 def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_path,
                           verbose=False, json_mode=False, json_out_path=None,
@@ -165,6 +187,13 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
                     if rel_p not in files_dict:
                         audit_errors.append(f"Security: Unmanifested file sitting in bundle: {rel_p}")
                         manifest_ok = False
+
+            # Check for forbidden private key files
+            forbidden_keys = find_forbidden_key_files(bundle_dir)
+            if forbidden_keys:
+                for fk in forbidden_keys:
+                    audit_errors.append(f"Security: private key material found in bundle: {fk}")
+                manifest_ok = False
 
             # Verify Producer Bundle Seal
             if seal_sig and os.path.exists(producer_pubkey_path):
@@ -688,12 +717,19 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
             # 1b. Unmanifested files detection
             for root, _, files in os.walk(bundle_dir):
                 for f in files:
-                    if f in ["manifest.json", "checksums.txt", "device_private_key.pem", ".DS_Store"]:
+                    if f in ["manifest.json", "checksums.txt", ".DS_Store"]:
                         continue
                     disk_rel = os.path.relpath(os.path.join(root, f), bundle_dir)
                     if disk_rel not in manifest_files:
                         audit_errors.append(f"Security: Unmanifested file detected in bundle: {disk_rel}")
                         all_files_ok = False
+
+            # Check for forbidden private key files
+            forbidden_keys = find_forbidden_key_files(bundle_dir)
+            if forbidden_keys:
+                for fk in forbidden_keys:
+                    audit_errors.append(f"Security: private key material found in bundle: {fk}")
+                all_files_ok = False
 
             # 1c. Bundle Seal verification (Company Root Key signature over canonical manifest files)
             bundle_seal = manifest.get("bundle_seal")

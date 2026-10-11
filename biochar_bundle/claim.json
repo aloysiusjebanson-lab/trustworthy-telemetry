@@ -6,7 +6,7 @@
   "first_sequence": 1,
   "last_sequence": 5,
   "batch_count": 5,
-  "terminal_hash": "1ba8e4c651604f4536086dfbef03e99c9c5a69e044f11794e1917f4e15a45bb2",
+  "terminal_hash": "5651a28a83cb6a54d6a9640a4cc58768dbc70488724861c1bc0a63b2935b8bca",
   "metrics": {
     "total_feedstock_input_g": 31250000,
     "total_wet_biochar_g": 10000000,

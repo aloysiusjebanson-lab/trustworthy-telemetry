@@ -32,7 +32,7 @@ def sign_data(data_bytes, private_key_path):
         raise RuntimeError(f"OpenSSL signing error: {err.decode('utf-8')}")
     return der_sig.hex()
 
-def build_biochar_claim_bundle(bundle_root="biochar_bundle"):
+def build_biochar_claim_bundle(bundle_root="biochar_bundle", producer_priv_key_path=None):
     print("=================================================================")
     print(" Biochar dMRV Evidence Pipeline — Claim Bundle Generator (v1.2)")
     print(" Profile: biochar_pyrolysis | EU CRCF & Puro.earth Standards")
@@ -227,8 +227,10 @@ def build_biochar_claim_bundle(bundle_root="biochar_bundle"):
     manifest_files = {}
     for root, _, files in os.walk(bundle_root):
         for file in sorted(files):
-            if file in ["manifest.json", "checksums.txt"]:
+            if file in ["manifest.json", "checksums.txt", ".DS_Store"]:
                 continue
+            if "private" in file.lower() or file.lower().endswith(".key"):
+                raise RuntimeError(f"Security: forbidden private key file found in bundle: {file}")
             full_path = os.path.join(root, file)
             rel_path = os.path.relpath(full_path, bundle_root)
             file_hash = sha256_file(full_path)
@@ -241,8 +243,11 @@ def build_biochar_claim_bundle(bundle_root="biochar_bundle"):
     manifest_files["checksums.txt"] = sha256_file(checksum_file)
 
     # 9. Cryptographically Seal Manifest with Producer Root Key
-    project_root = os.path.abspath(os.path.join(bundle_root, ".."))
-    root_priv = os.path.join(project_root, "producer_root_private_key.pem")
+    if producer_priv_key_path is None:
+        project_root = os.path.abspath(os.path.join(bundle_root, ".."))
+        root_priv = os.path.join(project_root, "producer_root_private_key.pem")
+    else:
+        root_priv = producer_priv_key_path
     if not os.path.exists(root_priv):
         raise FileNotFoundError(f"Missing Producer Root Key: {root_priv}")
 
@@ -265,5 +270,9 @@ def build_biochar_claim_bundle(bundle_root="biochar_bundle"):
     print("=================================================================")
 
 if __name__ == "__main__":
-    b_dir = sys.argv[1] if len(sys.argv) > 1 else "biochar_bundle"
-    build_biochar_claim_bundle(b_dir)
+    import argparse
+    parser = argparse.ArgumentParser(description="Biochar Claim Generator (v1.2)")
+    parser.add_argument("bundle", nargs="?", default="biochar_bundle", help="Target bundle directory")
+    parser.add_argument("--producer-key", default=None, help="Path to producer root private key")
+    args = parser.parse_args()
+    build_biochar_claim_bundle(args.bundle, producer_priv_key_path=args.producer_key)

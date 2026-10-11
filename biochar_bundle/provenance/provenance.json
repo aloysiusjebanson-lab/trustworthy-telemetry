@@ -5,7 +5,7 @@
   "entity": {
     "observations:observations.ndjson": {
       "type": "raw_batch_telemetry",
-      "sha256": "a21342a84bbcefd3f94001f6c8261714c15e1324ee6d20354cd0eec1d2173098"
+      "sha256": "a7882048ac2d2c0ad61b7fc8154008d5ec352fdfc7c234552a9f29ec9b5ec8b7"
     },
     "reference:lab_analysis.json": {
       "type": "iso17025_lab_report",
@@ -25,7 +25,7 @@
     },
     "claim:claim.json": {
       "type": "net_carbon_removal_claim",
-      "sha256": "9a64f6c890032c069471cf2b1a8aa0c30055dfac8cef50b18d3f2454cb837ce6"
+      "sha256": "c30640e4a6c2fefae89770913e2d85e993128d1b9d38661e9ea78db407da9db3"
     }
   },
   "activity": {

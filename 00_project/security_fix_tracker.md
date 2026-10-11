@@ -44,9 +44,9 @@ python3 src/attacks/biochar_attacks.py | tail -2          # 10/10 (but see Task 
 
 | ID | Phase | Task | Severity | Fixes | Status |
 |---|---|---|:---:|---|:---:|
-| A1 | A: Key hygiene | Move biochar device private key out of the bundle | 🔴 | P1, fresh-clone fail | ⬜ |
-| A2 | A | Verifier rejects any private-key file inside a bundle (both profiles) | 🔴 | P1 | ⬜ |
-| A3 | A | Regenerate `biochar_bundle/` and update registry if hashes change | 🔴 | — | ⬜ |
+| A1 | A: Key hygiene | Move biochar device private key out of the bundle | 🔴 | P1, fresh-clone fail | ✅ |
+| A2 | A | Verifier rejects any private-key file inside a bundle (both profiles) | 🔴 | P1 | ✅ |
+| A3 | A | Regenerate `biochar_bundle/` and update registry if hashes change | 🔴 | — | ✅ |
 | B1 | B: Biochar identity | Bind device public key ↔ certificate and re-derive `device_id` | 🔴 | P2 | ⬜ |
 | B2 | B | Algorithm allow-list + mandatory cert validity window | 🟠 | hardening | ⬜ |
 | B3 | B | Attestation: bind to the key hash and label it as a stub | 🟠 | P2 (partial) | ⬜ |
@@ -399,3 +399,4 @@ Update these files so nothing claims more than the code does:
 |---|---|---|
 | 2026-10-10 | Re-audit | 6/6 PoCs vulnerable; fresh-clone biochar golden vector FAILED (`device_private_key.pem` missing); biochar + insider suites crash on fresh clone |
 | 2026-10-11 | Tracker | Tracker + portable acceptance test `04_experiments/security_reaudit/poc_exploits.py` created (baseline: 6 vulnerable, exit 1) |
+| 2026-10-11 | Phase A (A1-A3) | Moved device private key to `src/device_simulator/keys/`; verifier Check 1 rejects any private key material in both profiles; `biochar_bundle/` regenerated; lab & feedstock hashes unchanged; P1 defended in `poc_exploits.py` (5 vulnerable remain); 10/10 verifier checks PASS. |
