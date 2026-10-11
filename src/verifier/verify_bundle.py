@@ -124,6 +124,7 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
     }
 
     audit_errors = []
+    audit_warnings = []
     obs_records = []
     claim_data = None
     lab_analysis = None
@@ -132,6 +133,10 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
     recomputed_gross_co2_g = 0
     recomputed_net_co2_g = 0
     recomputed_net_tonnes = 0.0
+    certified_device_id = None
+    cert_valid_from = None
+    cert_valid_until = None
+    attestation_mode = "UNKNOWN"
     device_pubkey_path = os.path.join(bundle_dir, "device", "public_key.pem")
 
     # Parse revocation list
@@ -220,15 +225,46 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
         attest_path = os.path.join(bundle_dir, "device", "hardware_attestation.json")
         dev_ok = True
 
-        if os.path.exists(cert_path) and os.path.exists(producer_pubkey_path):
+        if not os.path.exists(device_pubkey_path):
+            audit_errors.append("Missing device/public_key.pem")
+            dev_ok = False
+
+        if os.path.exists(cert_path) and os.path.exists(producer_pubkey_path) and os.path.exists(device_pubkey_path):
             with open(cert_path, "r") as f:
                 cert_doc = json.load(f)
             c_body = cert_doc.get("certificate_body", {})
             c_sig = cert_doc.get("company_signature")
 
+            # Algorithm allow-list check
+            if cert_doc.get("algorithm") != "ECDSA_P256_SHA256":
+                audit_errors.append(f"Device certificate uses untrusted algorithm: {cert_doc.get('algorithm')}")
+                dev_ok = False
+
             v_ok, v_msg = openssl_verify_signature(producer_pubkey_path, canonical_json_bytes(c_body), c_sig)
             if not v_ok:
                 audit_errors.append(f"Device certificate signature invalid: {v_msg}")
+                dev_ok = False
+
+            # Bind device public key to certificate
+            with open(device_pubkey_path, "r") as pf:
+                actual_pub_pem = pf.read().strip()
+            if actual_pub_pem != c_body.get("device_public_key", "").strip():
+                audit_errors.append("Device certificate public key does not match device/public_key.pem")
+                dev_ok = False
+
+            # Re-derive device_id from public key (SHA-256 over raw base64)
+            b64 = "".join(l.strip() for l in actual_pub_pem.splitlines() if not l.startswith("-----"))
+            derived_id = "device_biochar_" + hashlib.sha256(b64.encode('utf-8')).hexdigest()[:12]
+            certified_device_id = c_body.get("device_id")
+            if derived_id != certified_device_id:
+                audit_errors.append(f"Derived device ID {derived_id} != certified {certified_device_id}")
+                dev_ok = False
+
+            # Mandatory certificate validity window
+            cert_valid_from = c_body.get("valid_from")
+            cert_valid_until = c_body.get("valid_until")
+            if not (type(cert_valid_from) is int and type(cert_valid_until) is int and cert_valid_from < cert_valid_until):
+                audit_errors.append("Invalid or missing certificate validity window (valid_from/valid_until)")
                 dev_ok = False
 
             # Verify legal-for-trade scale metrology (EU Directive 2014/31/EU NAWI)
@@ -244,16 +280,17 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
             if os.path.exists(attest_path):
                 with open(attest_path, "r") as af:
                     attest_doc = json.load(af)
+                attestation_mode = attest_doc.get("attestation_mode", "UNKNOWN")
                 if attest_doc.get("attestation_status") != "SILICON_HARDWARE_VERIFIED":
                     audit_errors.append("Hardware attestation failed: silicon not verified")
+                    dev_ok = False
+                expected_key_hash = hashlib.sha256(actual_pub_pem.encode('utf-8')).hexdigest()
+                if attest_doc.get("device_public_key_sha256") != expected_key_hash:
+                    audit_errors.append("Hardware attestation key hash mismatch with device public key")
                     dev_ok = False
             else:
                 audit_errors.append("Missing hardware_attestation.json")
                 dev_ok = False
-
-            certified_device_id = c_body.get("device_id")
-            cert_valid_from = c_body.get("valid_from")
-            cert_valid_until = c_body.get("valid_until")
 
             # Check key revocation list
             if revocation_set and certified_device_id in revocation_set:
@@ -292,6 +329,11 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
                         audit_errors.append(f"Batch {idx+1}: device_id ({dev_id}) mismatch with certificate ({certified_device_id})")
                         obs_ok = False
 
+                    # Algorithm allow-list check
+                    if record.get("algorithm") != "ECDSA_P256_SHA256":
+                        audit_errors.append(f"Batch {idx+1}: untrusted algorithm: {record.get('algorithm')}")
+                        obs_ok = False
+
                     to_verify = {
                         "device_id": record.get("device_id"),
                         "batch_id": record.get("batch_id"),
@@ -307,7 +349,7 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
                     payload = record.get("payload", {})
                     ts_start = payload.get("timestamp_start", 0)
                     ts_end = payload.get("timestamp_end", 0)
-                    if cert_valid_from and (ts_start < cert_valid_from or ts_end > cert_valid_until):
+                    if cert_valid_from is None or cert_valid_until is None or ts_start < cert_valid_from or ts_end > cert_valid_until:
                         audit_errors.append(f"Batch {idx+1}: timestamp outside certificate validity window")
                         obs_ok = False
         else:
@@ -343,6 +385,42 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
                 if actual_prev != expected_prev:
                     audit_errors.append(f"Hash-chain broken at batch sequence {obs_records[i].get('sequence')}")
                     chain_ok = False
+
+            # Sequence ordering, batch_id uniqueness, and timestamp progression (B4)
+            seen_batch_ids = set()
+            last_end_ts = None
+            first_seq = obs_records[0].get("sequence")
+            for idx, r in enumerate(obs_records):
+                seq = r.get("sequence")
+                p = r.get("payload", {})
+                p_seq = p.get("sequence")
+                b_id = r.get("batch_id")
+                p_b_id = p.get("batch_id")
+                ts_start = p.get("timestamp_start", 0)
+                ts_end = p.get("timestamp_end", 0)
+
+                expected_seq = first_seq + idx
+                if seq != expected_seq or p_seq != expected_seq:
+                    audit_errors.append(f"Batch sequence gap or mismatch at index {idx}: expected {expected_seq}, got {seq}/{p_seq}")
+                    chain_ok = False
+
+                if b_id != p_b_id:
+                    audit_errors.append(f"Batch ID mismatch between envelope ({b_id}) and payload ({p_b_id})")
+                    chain_ok = False
+
+                if b_id in seen_batch_ids:
+                    audit_errors.append(f"Duplicate batch_id detected: {b_id}")
+                    chain_ok = False
+                seen_batch_ids.add(b_id)
+
+                if ts_start >= ts_end:
+                    audit_errors.append(f"Batch {b_id}: invalid timestamps (timestamp_start >= timestamp_end)")
+                    chain_ok = False
+
+                if last_end_ts is not None and ts_start < last_end_ts:
+                    audit_errors.append(f"Batch {b_id}: non-monotonic timestamp progression (start {ts_start} < previous end {last_end_ts})")
+                    chain_ok = False
+                last_end_ts = ts_end
         else:
             chain_ok = False
 
@@ -567,7 +645,15 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
         print(f"[Check 10/10] Numeric Claim Reconciliation (Zero-Tol): [{s10}]")
 
     # Structured Audit Summary
+    if attestation_mode == "SIMULATED_STUB":
+        audit_warnings.append("Hardware attestation is a simulator stub; manufacturer certificate chain not verified (Milestone 2).")
+
     all_passed = all(results.values())
+    origin_msg = (
+        "Declared origin verified (Physical sensor & hardware attestation stub verified)"
+        if attestation_mode == "SIMULATED_STUB"
+        else "Declared origin verified (Physical sensor & silicon hardware verified)"
+    )
     audit_report = {
         "verdict": "PASSED" if all_passed else "FAILED",
         "profile": "biochar_pyrolysis",
@@ -575,8 +661,10 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
         "trust_anchor": producer_pubkey_path,
         "checks": {k: "PASSED" if v else "FAILED" for k, v in results.items()},
         "errors": audit_errors,
+        "warnings": audit_warnings,
         "audit_findings": {
-            "telemetry_origin_status": "Declared origin verified (Physical sensor & silicon hardware verified)",
+            "telemetry_origin_status": origin_msg,
+            "hardware_attestation_mode": attestation_mode,
             "batch_count": len(obs_records),
             "permanence_status": "Permanence conditions verified (T >= 500°C maintained across all batches)",
             "mass_balance_status": "Mass-balance verified (Physical conservation bounds satisfied)",
@@ -598,8 +686,12 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
 
         if all_passed:
             print("[AUDIT VERDICT: PASSED]")
-            print("  Status: Declared origin verified. Permanence verified. Lineage verified.")
+            print(f"  Status: {origin_msg}. Permanence verified. Lineage verified.")
             print("  All 10 specification checks passed without exception.")
+            if audit_warnings:
+                print("  Warnings:")
+                for warn in audit_warnings:
+                    print(f"    - [WARNING] {warn}")
             print("=" * 70)
         else:
             print("[AUDIT VERDICT: FAILED]")
@@ -608,6 +700,10 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
                 print("  Errors:")
                 for err in audit_errors:
                     print(f"    - {err}")
+            if audit_warnings:
+                print("  Warnings:")
+                for warn in audit_warnings:
+                    print(f"    - [WARNING] {warn}")
             print("=" * 70)
     else:
         print(json.dumps(audit_report, indent=2))
@@ -665,6 +761,7 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
     }
 
     audit_errors = []
+    audit_warnings = []
     obs_records = []
     t_energy = None
     t_carbon = None
@@ -676,6 +773,7 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
     certified_device_id = None
     cert_valid_from = None
     cert_valid_until = None
+    attestation_mode = "UNKNOWN"
     device_pubkey_path = os.path.join(bundle_dir, "device", "public_key.pem")
 
     # Resolve trusted registry path
@@ -760,9 +858,14 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
         attestation_path = os.path.join(bundle_dir, "device", "hardware_attestation.json")
         cert_ok = False
 
+        if not os.path.exists(device_pubkey_path):
+            audit_errors.append("Missing device/public_key.pem")
+
         if os.path.exists(device_cert_path) and os.path.exists(company_pubkey_path) and os.path.exists(device_pubkey_path):
             with open(device_cert_path, "r") as f:
                 cert_data = json.load(f)
+            if cert_data.get("algorithm") != "ECDSA_P256_SHA256":
+                audit_errors.append(f"Untrusted certificate algorithm: {cert_data.get('algorithm')}")
             cert_body = cert_data.get("certificate_body", {})
             cert_sig = cert_data.get("company_signature", "")
             canonical_cert_bytes = canonical_json_bytes(cert_body)
@@ -774,7 +877,7 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
                 if actual_pub_pem == cert_body.get("device_public_key", "").strip():
                     cert_valid_from = cert_body.get("valid_from")
                     cert_valid_until = cert_body.get("valid_until")
-                    if cert_valid_from is not None and cert_valid_until is not None and cert_valid_from < cert_valid_until:
+                    if type(cert_valid_from) is int and type(cert_valid_until) is int and cert_valid_from < cert_valid_until:
                         certified_device_id = cert_body.get("device_id")
                         # 2a. Check key revocation list
                         if revocation_set and certified_device_id in revocation_set:
@@ -787,10 +890,15 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
                                 if os.path.exists(attestation_path):
                                     with open(attestation_path, "r") as af:
                                         att_data = json.load(af)
-                                    if att_data.get("attestation_status") == "verified_hardware_secure_element":
-                                        cert_ok = True
-                                    else:
+                                    attestation_mode = att_data.get("attestation_mode", "UNKNOWN")
+                                    att_status_ok = att_data.get("attestation_status") == "verified_hardware_secure_element"
+                                    if not att_status_ok:
                                         audit_errors.append("Hardware attestation status not verified")
+                                    expected_key_hash = hashlib.sha256(actual_pub_pem.encode('utf-8')).hexdigest()
+                                    if att_data.get("device_public_key_sha256") != expected_key_hash:
+                                        audit_errors.append("Hardware attestation key hash mismatch with device public key")
+                                    elif att_status_ok and cert_data.get("algorithm") == "ECDSA_P256_SHA256":
+                                        cert_ok = True
                                 else:
                                     audit_errors.append("Missing hardware_attestation.json")
                             else:
@@ -1183,15 +1291,25 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
     # -------------------------------------------------------------
     # Structured Audit Report
     # -------------------------------------------------------------
+    if attestation_mode == "SIMULATED_STUB":
+        audit_warnings.append("Hardware attestation is a simulator stub; manufacturer certificate chain not verified (Milestone 2).")
+
     all_passed = all(results.values())
+    origin_msg = (
+        "Declared origin verified (Physical sensor & hardware attestation stub verified)"
+        if attestation_mode == "SIMULATED_STUB"
+        else "Declared origin verified"
+    )
     audit_report = {
         "verdict": "PASSED" if all_passed else "FAILED",
         "bundle": bundle_dir,
         "company_trust_anchor": company_pubkey_path,
         "checks": {k: "PASSED" if v else "FAILED" for k, v in results.items()},
         "errors": audit_errors,
+        "warnings": audit_warnings,
         "audit_findings": {
-            "observations_status": "Declared origin verified",
+            "observations_status": origin_msg,
+            "hardware_attestation_mode": attestation_mode,
             "observation_records_count": len(obs_records),
             "hash_chain_status": "Unbroken genesis-to-terminal chain verified" if results["check4_hash_chain_continuity"] else "Broken",
             "reference_factor_status": "Provenance verified against auditor pinned registry",
@@ -1207,7 +1325,7 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
         print("-" * 70)
         print(" FORMAL AUDIT VERIFICATION SUMMARY")
         print("-" * 70)
-        print(f"  * Observations (Telemetry) : Declared origin verified ({len(obs_records)} records, unbroken hash-chain)")
+        print(f"  * Observations (Telemetry) : {origin_msg} ({len(obs_records)} records, unbroken hash-chain)")
         print(f"  * Reference Factor          : Provenance verified (Pinned ISPRA {pinned_factor} kg CO2e/kWh)")
         print(f"  * Independent Recomputation : Total Energy  = {recomputed_wh} Wh ({recomputed_kwh} kWh)")
         print(f"                                Total Scope 2 = {recomputed_co2e} kg CO2e")
@@ -1215,8 +1333,12 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
 
         if all_passed:
             print("[AUDIT VERDICT: PASSED]")
-            print("  Status: Declared origin verified. Calculation lineage verified.")
+            print(f"  Status: {origin_msg}. Calculation lineage verified.")
             print("  All 10 specification checks passed without exception.")
+            if audit_warnings:
+                print("  Warnings:")
+                for warn in audit_warnings:
+                    print(f"    - [WARNING] {warn}")
             print("=" * 70)
         else:
             print("[AUDIT VERDICT: FAILED]")
@@ -1225,6 +1347,10 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
                 print("  Errors:")
                 for err in audit_errors:
                     print(f"    - {err}")
+            if audit_warnings:
+                print("  Warnings:")
+                for warn in audit_warnings:
+                    print(f"    - [WARNING] {warn}")
             print("=" * 70)
     else:
         print(json.dumps(audit_report, indent=2))

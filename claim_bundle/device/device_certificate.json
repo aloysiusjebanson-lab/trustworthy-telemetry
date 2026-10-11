@@ -15,6 +15,6 @@
     "valid_until": 1830297600,
     "issued_by": "company_authority_milan"
   },
-  "company_signature": "30460221008eb5d2e39591df852ba9a646626206792c36129f08a7cd3c2865e2c1ad5f09fd022100d684984783e5eb608265ba58bb9645d8133fa0219ab4d28d89e531aa018b9364",
+  "company_signature": "3046022100d2de3c14137415b31c0eaddfb014247ed0c3a5f9b2b968a632fcde561490ebf1022100d1ed629dcb0fb8e8cd4307c1a627f4780ff27cbf04d8546ee5290c95cefd373d",
   "algorithm": "ECDSA_P256_SHA256"
 }

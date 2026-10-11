@@ -47,10 +47,10 @@ python3 src/attacks/biochar_attacks.py | tail -2          # 10/10 (but see Task 
 | A1 | A: Key hygiene | Move biochar device private key out of the bundle | 🔴 | P1, fresh-clone fail | ✅ |
 | A2 | A | Verifier rejects any private-key file inside a bundle (both profiles) | 🔴 | P1 | ✅ |
 | A3 | A | Regenerate `biochar_bundle/` and update registry if hashes change | 🔴 | — | ✅ |
-| B1 | B: Biochar identity | Bind device public key ↔ certificate and re-derive `device_id` | 🔴 | P2 | ⬜ |
-| B2 | B | Algorithm allow-list + mandatory cert validity window | 🟠 | hardening | ⬜ |
-| B3 | B | Attestation: bind to the key hash and label it as a stub | 🟠 | P2 (partial) | ⬜ |
-| B4 | B | Biochar sequence and `batch_id` uniqueness checks | 🟡 | hardening | ⬜ |
+| B1 | B: Biochar identity | Bind device public key ↔ certificate and re-derive `device_id` | 🔴 | P2 | ✅ |
+| B2 | B | Algorithm allow-list + mandatory cert validity window | 🟠 | hardening | ✅ |
+| B3 | B | Attestation: bind to the key hash and label it as a stub | 🟠 | P2 (partial) | ✅ |
+| B4 | B | Biochar sequence and `batch_id` uniqueness checks | 🟡 | hardening | ✅ |
 | C1 | C: Physics & metrology | Calibration validity vs every batch timestamp (biochar) | 🟠 | P3 | ⬜ |
 | C2 | C | MID metrology check for the energy profile (claimed S7, missing) | 🟠 | tracker gap | ⬜ |
 | C3 | C | Per-batch mass balance + max dry-yield bound | 🟡 | P5, P6 | ⬜ |
@@ -400,3 +400,4 @@ Update these files so nothing claims more than the code does:
 | 2026-10-10 | Re-audit | 6/6 PoCs vulnerable; fresh-clone biochar golden vector FAILED (`device_private_key.pem` missing); biochar + insider suites crash on fresh clone |
 | 2026-10-11 | Tracker | Tracker + portable acceptance test `04_experiments/security_reaudit/poc_exploits.py` created (baseline: 6 vulnerable, exit 1) |
 | 2026-10-11 | Phase A (A1-A3) | Moved device private key to `src/device_simulator/keys/`; verifier Check 1 rejects any private key material in both profiles; `biochar_bundle/` regenerated; lab & feedstock hashes unchanged; P1 defended in `poc_exploits.py` (5 vulnerable remain); 10/10 verifier checks PASS. |
+| 2026-10-11 | Phase B (B1-B4) | Bound device public key to certificate & re-derived device_id; algorithm allowlist & mandatory validity window enforced; attestation key hash checked & labeled as SIMULATED_STUB with audit warnings; sequence strict increment, payload/envelope match, batch_id uniqueness, and monotonic timestamps verified in Check 4; P2 defended in `poc_exploits.py` (4 vulnerable remain); biochar & energy bundles PASS with 10/10 checks. |

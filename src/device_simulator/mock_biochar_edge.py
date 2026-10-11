@@ -136,6 +136,7 @@ def generate_biochar_telemetry(bundle_root="biochar_bundle", num_batches=5, keys
         "manufacturer_ca": "Microchip Technology Root CA 2026",
         "device_public_key_sha256": hashlib.sha256(device_pub_pem.encode('utf-8')).hexdigest(),
         "attestation_status": "SILICON_HARDWARE_VERIFIED",
+        "attestation_mode": "SIMULATED_STUB",
         "pcr_quote": "c84f1092a83bd782019482710384729104820194820194820194820194820194"
     }
     with open(os.path.join(device_dir, "hardware_attestation.json"), "w") as f:
