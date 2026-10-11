@@ -37,11 +37,17 @@ def openssl_sign(priv_path, data_bytes):
     )
     return binascii.hexlify(proc.stdout).decode('utf-8')
 
-def generate_claim_bundle(bundle_root="claim_bundle", reference_dir="05_data/external",
+def generate_claim_bundle(bundle_root="claim_bundle", reference_dir=None,
                           company_priv_key_path="company_root_private_key.pem"):
     print("=" * 65)
     print(" Evidence Pipeline — Claim Bundle Generator (v1.1)")
     print("=" * 65)
+
+    if reference_dir is None:
+        if os.path.exists("04_experiments/reference_data"):
+            reference_dir = "04_experiments/reference_data"
+        else:
+            reference_dir = "05_data/external"
 
     obs_file = os.path.join(bundle_root, "observations", "observations.ndjson")
     if not os.path.exists(obs_file):
@@ -216,8 +222,11 @@ def generate_claim_bundle(bundle_root="claim_bundle", reference_dir="05_data/ext
     bundle_files = []
     for root, _, files in sorted(os.walk(bundle_root)):
         for f in sorted(files):
-            if f in ["manifest.json", "checksums.txt", "device_private_key.pem"]:
+            if f in ["manifest.json", "checksums.txt", ".DS_Store"]:
                 continue
+            lf = f.lower()
+            if any(s in lf for s in ("private", ".key")):
+                raise RuntimeError(f"Security: private key material detected in bundle: {f}")
             rel_path = os.path.relpath(os.path.join(root, f), bundle_root)
             full_path = os.path.join(root, f)
             bundle_files.append((rel_path, compute_sha256(full_path)))
