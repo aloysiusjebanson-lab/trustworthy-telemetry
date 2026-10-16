@@ -1,6 +1,6 @@
-# Verifiable Telemetry (v1.2)
+# Verifiable Telemetry Engine (v1.2)
 
-> **Universal Open-Source Hardware Root-of-Trust & Local-First Cryptographic Provenance for Industrial IoT (EU MID & NAWI / CSRD & CRCF)**
+> **Universal, Pluggable Open-Source Hardware Root-of-Trust & Offline Cryptographic Verifier for Industrial IoT Telemetry**
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Dependencies](https://img.shields.io/badge/Dependencies-Zero_Pip_Deps-success.svg)]()
@@ -8,505 +8,295 @@
 [![Platform](https://img.shields.io/badge/Platform-macOS_%7C_Linux_%7C_POSIX-lightgrey.svg)]()
 [![Cryptography](https://img.shields.io/badge/Crypto-NIST_P--256_%7C_SHA--256_%7C_RFC_8785-orange.svg)]()
 [![Tests](https://img.shields.io/badge/Adversarial_Tests-33%2F33_Caught-brightgreen.svg)]()
-[![Standards](https://img.shields.io/badge/Standards-EU_MID_%7C_NAWI_%7C_CSRD_%7C_CRCF_%7C_W3C_PROV--O-informational.svg)]()
+[![Standards](https://img.shields.io/badge/Standards-W3C_PROV--O_%7C_EU_MID_%7C_EU_NAWI-informational.svg)]()
 
 ---
 
-## Executive Summary
+## 1. Executive Summary: Building the Engine, Not the Car
 
-Today, physical telemetry across Industrial IoT (submetering, manufacturing, grid energy, process heat, and environmental compliance) lacks an open, trustworthy internet architecture. Millions of industrial edge sensors are funneled into closed, proprietary cloud silos ("dark stacks"), unauthenticated SQL databases, and manual spreadsheets where operational telemetry can be silently altered, trimmed, or falsified before regulatory audit without leaving any cryptographic footprint.
+Modern industrial telemetry lacks an open, trustworthy physical-to-digital foundation. Across energy grids, manufacturing plants, heat networks, water treatment facilities, and environmental compliance sites, physical edge instruments (submeters, weighing scales, flow meters, thermocouples) feed raw readings into operator-controlled PLC/SCADA servers, mutable SQL databases, and proprietary cloud silos ("dark stacks"). Before an external auditor or regulator ever inspects a compliance report, intervals can be shaved, anomalous batches omitted, calibration windows ignored, or conversion factors cherry-picked without leaving any cryptographic trace.
 
-When physical operations carry high-stakes financial or statutory consequences—such as corporate ESG disclosures (**CSRD Directive 2022/2464**) and high-durability carbon removals (**EU CRCF Delegated Regulation 2026/285**, where permanent removal credits command **\$100–\$200/tonne**)—auditors, regulators, and validation and verification bodies (VVBs) are forced to audit claims against easily manipulated CSV exports, uncalibrated instrument printouts, and opaque private dashboards. Without cryptographic binding directly at the physical instrument boundary, fraud vectors such as **meter register shaving**, **interval omission**, **moisture inflation (water spraying)**, and **process temperature tampering** remain undetectable.
+Standard cybersecurity tools do not solve this problem: **TLS only encrypts data in transit against external eavesdroppers, whereas in industrial compliance and regulatory auditing, the facility operator has physical and root administrative access to the local network and database.**
 
-**Verifiable Telemetry** restacks the physical-to-internet trust boundary with an open-source, local-first engine. A hardened edge gateway captures raw physical sensor telemetry directly at the physical measurement wire (via 2.5 kV galvanically isolated RS-485 Modbus RTU, pulse, or serial loops), cryptographically signing readings inside hardware secure elements (Microchip ATECC608 in Silicon Slot 0, TPM 2.0, or DICE) into an unbroken cryptographic hash-chain. Self-contained W3C PROV-O evidence bundles allow independent auditors to verify physical origin, statutory invariant compliance, mass/energy conservation, and mathematical reconciliations **100% offline with zero cloud vendor lock-in and zero third-party dependencies**.
-
-### Dual Regulatory Proving Grounds
-
-To demonstrate that the protocol is universal rather than single-industry, Verifiable Telemetry implements two reference profiles covering the two primary physical measurement paradigms of industrial telemetry:
-
-1. **Profile 1: Industrial Energy Submetering (`energy_submetering`):**
-   * **Physical Paradigm:** Continuous linear electrical metrology.
-   * **Regulatory Mandate:** EU Corporate Sustainability Reporting Directive (**CSRD Directive 2022/2464**) and Energy Performance of Buildings Directive (**EPBD**).
-   * **Invariants Enforced:** EU Directive 2014/32/EU (MID Class B) meter metrology, dual-register integer consistency (`Δ cumulative_wh == interval_wh`), and pinned national grid emission factors (e.g., ISPRA).
-2. **Profile 2: High-Durability Carbon Removals (`biochar_pyrolysis`):**
-   * **Physical Paradigm:** Non-linear thermodynamic mass and thermal transformation.
-   * **Regulatory Mandate:** EU Carbon Removal Certification Framework (**EU CRCF Delegated Regulation 2026/285**), **Puro.earth CORCs**, and the **European Biochar Certificate (EBC)**.
-   * **Invariants Enforced:** EU Directive 2014/31/EU (NAWI Class III) legal-for-trade scale metrology, continuous Type-K thermocouple thermal permanence ($T_{\min} \ge 500^\circ\text{C}$), accredited ISO 17025 lab assays, and first-law physical mass-balance conservation ($M_{\text{dry}} \le M_{\text{feedstock}}$).
-
-### The Trust Boundary Philosophy
-> *"We do not claim to solve all physical tampering in the universe. We make fraud require physical hardware tampering or multi-party institutional collusion, instead of an unauthenticated database query or spreadsheet edit."*
+**Verifiable Telemetry** builds the **universal open-source cryptographic engine** for physical telemetry—not a single-vertical SaaS application ("the engine, not the car"):
+* **At the Physical Edge Boundary:** A hardened edge gateway taps legal-for-trade field instruments directly over 2.5 kV galvanically isolated RS-485/serial links (ahead of operator PLC/SCADA software), formats readings as deterministic scaled integers (RFC 8785), chains every record to the SHA-256 hash of its predecessor (`prev_hash`), and signs each envelope inside a hardware Secure Element (`Microchip ATECC608B` or `TPM 2.0`).
+* **In the Evidence Container (`claim_bundle/`):** Telemetry streams, device certificates, legal metrology calibration windows, pinned external reference digests, and deterministic integer transformation recipes are bound into a self-contained **W3C PROV-O** evidence bundle sealed by the Producer Root Key.
+* **At the Independent Verifier (`verify_bundle.py`):** An air-gapped auditor, conformity assessment body (CAB/VVB), or regulator runs a zero-dependency CLI engine (Python 3 stdlib + POSIX OpenSSL, with a standalone Rust port in Milestone 3) that executes **7 universal cryptographic & structural engine checks** plus **3 pluggable domain invariant hooks**—verifying physical origin, stream continuity, and conservation laws **100% offline with zero trust in the reporting operator**.
 
 ---
 
-## 3-Layer Universal Restack Architecture
+## 2. Universal Engine Architecture (7 Core Checks + 3 Pluggable Hooks)
 
-### System Architecture & Data Flow
+The engine cleanly separates **domain-agnostic cryptographic verification** (7 Core Engine Checks) from **domain-specific physical conservation rules** (3 Pluggable Profile Hooks dispatched via `SUPPORTED_PROFILE_DRIVERS`).
 
 ```mermaid
 flowchart TD
-    subgraph L1["1. Physical Layer: Field Instrumentation & Safe-Zone Hardware RoT"]
-        subgraph SENSORS["Physical Field Instruments"]
-            METER["EU MID Class B Electricity Submeter\n(RS-485 Modbus RTU / Energy Profile)"]
-            SCALE["EU NAWI Class III Weighing Scale\n(Serial / Gross Mass Indicator)"]
-            TC["Type-K Thermocouple Array\n(Hearth Temperature Transmitters)"]
-        end
+    subgraph L1["1. Physical Edge Layer: Isolated Bus Tap & Hardware Root-of-Trust"]
+        SENSORS["Legal-for-Trade Field Instruments\n(Modbus RTU / Serial / Pulse Bus)"]
+        ISOL["2.5 kV Galvanically Isolated RS-485 Tap\n(Bypasses Plant PLC / SCADA Overwrites)"]
+        ATECC["Hardware Secure Element\n(ATECC608B / TPM 2.0 Key Slot)"]
+        CHAIN["Sequential Hash-Chain Engine\n(prev_hash = SHA-256 of prior envelope)"]
+        OBS["Signed Canonical Integer Stream\n(observations/observations.ndjson)"]
 
-        subgraph CABINET["Safe-Zone Electrical Control Cabinet (under 55°C)"]
-            GATEWAY["Hardened Edge Gateway\n(2.5 kV Galvanically Isolated RS-485)"]
-            ATECC["Microchip ATECC608 Secure Element\n(Private Key Locked in Silicon Slot 0)"]
-            HASH_CHAIN["Sequential Hash-Chain Engine\n(prev_hash = SHA-256 of prior observation)"]
-            SIGNED_OBS["Signed Observation Stream\n(NIST P-256 ECDSA + observations.ndjson)"]
-        end
-
-        METER -->|Direct isolated wire-tap| GATEWAY
-        SCALE -->|Direct serial weight feed| GATEWAY
-        TC -->|Direct thermocouple bus tap| GATEWAY
-        ATECC -.->|Hardware root-of-trust| GATEWAY
-        GATEWAY --> HASH_CHAIN
-        HASH_CHAIN --> SIGNED_OBS
+        SENSORS --> ISOL
+        ISOL --> CHAIN
+        ATECC -.->|ECDSA P-256 silicon signature| CHAIN
+        CHAIN --> OBS
     end
 
-    subgraph L2["2. Protocol Layer: Local Lineage & Evidence Packaging (Producer Authority)"]
-        INGEST["Deterministic Lineage Pipeline\n(claim_generator.py / biochar_claim_generator.py)"]
-        DEV_CERT["Device Certificate\n(Signed by Producer Root + Metrological Pedigree)"]
-        
-        subgraph TRANSFORMS["Domain Transformations & Statutory Invariants"]
-            ENERGY_CALC["Energy Reconciliation\n(Delta cum_wh == int_wh + Grid Factor)"]
-            MASS_BALANCE["Mass & Energy Conservation\n(Net Dry Mass ≤ Feedstock Input)"]
-            PERMANENCE["Process Invariant Enforcement\n(Thermal Permanence T ≥ 500°C)"]
-        end
+    subgraph L2["2. Protocol Container Layer: Self-Contained Evidence Bundle (claim_bundle/)"]
+        DEV["Device Identity & Metrology\n(device_certificate.json + hardware_attestation.json)"]
+        REF["External Reference Inputs\n(reference_data/*.json | *.csv)"]
+        RECIPES["Deterministic Integer Recipes\n(transformations/*.json)"]
+        PROV["W3C PROV-O Lineage Graph\n(provenance/provenance.json)"]
+        CLAIM["Declared Claim Metrics & Bounds\n(claim.json)"]
+        MANIFEST["Canonical SHA-256 File Catalog & Root Seal\n(manifest.json + bundle_seal)"]
 
-        PROV["W3C PROV-O Lineage Graph\n(provenance.json Entity & Activity Digests)"]
-        CLAIM["Standardized Claim Assertion\n(claim.json Metric Tonnes CO2e)"]
-        MANIFEST["Canonical Bundle Manifest\n(manifest.json RFC 8785 SHA-256 Inventory)"]
-        BUNDLE_SEAL["Producer Bundle Seal\n(Producer Root Signature over manifest.json)"]
-
-        SIGNED_OBS --> INGEST
-        DEV_CERT --> INGEST
-        INGEST --> TRANSFORMS
-        TRANSFORMS --> PROV
-        TRANSFORMS --> CLAIM
+        OBS --> RECIPES
+        REF --> RECIPES
+        RECIPES --> PROV
+        RECIPES --> CLAIM
+        OBS --> MANIFEST
+        DEV --> MANIFEST
+        REF --> MANIFEST
+        RECIPES --> MANIFEST
         PROV --> MANIFEST
         CLAIM --> MANIFEST
-        DEV_CERT --> MANIFEST
-        SIGNED_OBS --> MANIFEST
-        MANIFEST --> BUNDLE_SEAL
     end
 
-    subgraph L3["3. Verifier Layer: Zero-Trust Offline Auditor Verifier (VVB / Regulators)"]
-        VERIFIER["Zero-Dependency Offline Verifier\n(verify_bundle.py / Native POSIX OpenSSL CLI)"]
-        ROOT_PUB["Producer Root Public Key\n(Pinned Trust Anchor)"]
-        REGISTRY["Auditor Pinned Reference Registry\n(trusted_references.json Digests & Params)"]
-        LEDGER["Auditor Claim Ledger\n(Cross-Claim Double Counting Defense)"]
+    subgraph L3["3. Verifier Engine Layer: Zero-Trust Offline CLI (verify_bundle.py)"]
+        CORE["7 Universal Core Engine Checks\n- Check 1: Manifest Seal, Path Jail & Key Hygiene\n- Check 2: Cert Signature, Key Binding, Silicon & Metrology\n- Check 3: Observation ECDSA Signatures & Calibration Window\n- Check 4: Genesis & Sequential prev_hash Continuity\n- Check 6: Period Boundaries & Cross-Claim Replay Ledger\n- Check 7: W3C PROV-O Entity & Recipe Digest Lineage\n- Check 10: Zero-Tolerance Integer Claim Reconciliation"]
+        HOOKS["3 Pluggable Profile Hooks (SUPPORTED_PROFILE_DRIVERS)\n- Check 5 Hook: Process Continuity Invariant\n- Check 8 Hook: Pinned Authority Reference Verification\n- Check 9 Hook: Physical Conservation & Recomputation"]
+        REGISTRY["Auditor Pinned Registry & Replay Ledger\n(trusted_references.json + --claim-ledger)"]
+        VERDICT{"Formal Audit Verdict:\nPASSED or FAILED (Fail-Closed)"}
 
-        subgraph CHECKS["10-Check Fail-Closed Verification Engine"]
-            C1["1. Manifest Integrity & Producer Root Seal"]
-            C2["2. Device Cert, Silicon RoT & Legal Metrology"]
-            C3["3. Observation Signatures & Temporal Bounds"]
-            C4["4. Unbroken Cryptographic Hash-Chain"]
-            C5["5. Process & Thermal Permanence Invariants"]
-            C6["6. Claim Boundary Bounds & Ledger Deduplication"]
-            C7["7. W3C PROV-O Lineage Graph Consistency"]
-            C8["8. Authoritative Pinned Registry Reference Match"]
-            C9["9. Physical Mass/Energy Invariants & Recomputation"]
-            C10["10. Zero-Tolerance Claim Numeric Reconciliation"]
-        end
-
-        AUDIT_VERDICT{"Formal Audit Verdict:\nPASSED or FAILED"}
-
-        ROOT_PUB -->|Trust anchor| VERIFIER
-        REGISTRY -->|Pinned reference digests| VERIFIER
-        LEDGER -->|Terminal hash history| VERIFIER
-        VERIFIER --> CHECKS
-        CHECKS --> AUDIT_VERDICT
+        MANIFEST --> CORE
+        CORE --> HOOKS
+        REGISTRY --> HOOKS
+        HOOKS --> VERDICT
     end
-
-    BUNDLE_SEAL -->|Self-contained bundle directory| VERIFIER
 ```
 
-### End-to-End Cryptographic Lifecycle
+### The 10-Check Fail-Closed Verifier State Machine
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant S as Physical Instruments (MID Submeter / NAWI Scale / Thermocouple)
-    participant G as Edge Gateway (Silicon RoT ATECC608 + 2.5 kV Isolated Bus)
-    participant P as Producer Pipeline (Local Claim Generator & PROV-O Engine)
-    participant V as Offline Auditor Verifier (Air-Gapped POSIX CLI)
-    participant R as Auditor Pinned Registry (trusted_references.json)
-
-    Note over S,G: Layer 1: Hardware Root-of-Trust at the Wire (Safe Zone)
-    S->>G: Raw serial / Modbus registers (energy Wh, scale mass g, hearth temp °C)
-    G->>G: Verify local process invariants (e.g., T_min ≥ 500°C or cum_wh delta)
-    G->>G: Compute sequential hash-chain link: H_n = SHA-256(H_{n-1} || payload_n)
-    G->>G: Sign observation envelope inside secure element (NIST P-256 ECDSA)
-    G-->>P: Stream signed observations.ndjson with unbroken hash-chain
-
-    Note over P: Layer 2: Transformation, Lineage & Cryptographic Bundle Sealing
-    P->>P: Ingest observations & bind authoritative reference digests (lab assays / grid factors)
-    P->>P: Enforce domain conservation laws (mass conservation M_dry ≤ M_in, energy consistency)
-    P->>P: Compute statutory regulatory metrics (EU CSRD Scope 2 / EU CRCF net removals)
-    P->>P: Generate W3C PROV-O graph (provenance.json) and formal claim (claim.json)
-    P->>P: Compute canonical manifest.json hash inventory across all bundle files
-    P->>P: Cryptographically seal manifest.json with Producer Root Key (Bundle Seal)
-
-    Note over V,R: Layer 3: Zero-Trust Offline Audit (Air-Gapped Auditor / VVB)
-    P-->>V: Submit self-contained evidence bundle & Producer Root Public Key
-    V->>V: Check 1: Verify Producer Root Signature over manifest.json (Bundle Seal)
-    V->>V: Check 2: Verify ATECC608 Silicon RoT & MID / NAWI Legal Metrology Certificates
-    V->>V: Check 3-4: Verify ECDSA Observation Signatures & Hash-Chain Continuity
-    V->>V: Check 5: Verify Process & Thermal Permanence Invariants across all records (T ≥ 500°C)
-    V->>R: Check 8: Match Lab Assays, Biomass Manifests, or Grid Factors vs Auditor Registry
-    V->>V: Check 9: Recompute statutory metrics from raw telemetry; assert physical conservation
-    V->>V: Check 10: Match recomputed results against declared claim.json (Zero-Tolerance)
-    V-->>V: Emit Formal Audit Verdict: [AUDIT VERDICT: PASSED]
-```
----
-
-## Foundational European Statutory Metrology & Open Standards
-
-To withstand legal and financial audits, industrial telemetry cannot rely on self-attested operational claims or proprietary cloud dashboards. Verifiable Telemetry grounds its verification rules in statutory European metrology, corporate reporting directives, and open internet provenance standards:
-
-1. **Harmonized European Legal Metrology Directives:**
-   * **EU Directive 2014/32/EU (Measuring Instruments Directive - MID):** Governs active electrical energy meters (Class B accuracy, $\le 1.0\%$ error). Our energy profile cryptographically binds MID meter serial numbers, calibration validity, and dual-register integrity into the signed device certificate.
-   * **EU Directive 2014/31/EU (Non-Automatic Weighing Instruments - NAWI):** Governs legal-for-trade industrial scale indicators (Class III accuracy) used for certified batch mass measurement. Our biochar profile enforces NAWI certificate binding, rejecting uncertified load cells fail-closed.
-2. **Statutory Corporate Disclosures & Carbon Removal Frameworks:**
-   * **EU Directive 2022/2464/EU (Corporate Sustainability Reporting Directive - CSRD) & EPBD:** Mandates statutory Scope 1 & Scope 2 greenhouse gas reporting and energy performance audits across EU enterprises. Requires unbroken provenance from meter registers to ESG filings.
-   * **EU Delegated Regulation (EU) 2026/285 (Carbon Removals Certification Framework - CRCF):** Statutory EU regulation defining permanent biochar removals. Mandates continuous thermal permanence ($T \ge 500^\circ\text{C}$), organic molar ratio $\text{H/C}_{\text{org}} \le 0.70$, net lifecycle accounting ($E_{\text{net}} = E_{\text{gross}} - E_{\text{leakage}} - E_{\text{process}}$), and accredited ISO 17025 lab assays.
-   * **Voluntary Carbon Standards (Puro.earth, EBC, Isometric, ICVCM):** Enforce independent VVB third-party audits, certified feedstock positive lists (e.g., `EBC-1.1-FOREST`), and conservative uncertainty bounds.
-3. **Open Internet Protocols & Cryptographic Commons:**
-   * **W3C PROV-O (Provenance Ontology):** Standardized, machine-readable directed acyclic graph capturing entities, activities, and cryptographic derivations across the entire lifecycle.
-   * **RFC 8785 (JSON Canonicalization Scheme - JCS):** Deterministic, byte-level hash stabilization across platforms and runtimes.
-   * **NIST P-256 (secp256r1) & SHA-256:** Standard asymmetric ECDSA signatures compatible with hardware secure elements (Microchip ATECC608, TPM 2.0, DICE).
+| Check # | Engine Layer | Verification Stage | Universal Engine Enforcement / Plugin Hook Contract |
+|:---:|:---:|---|---|
+| **1** | **Core Engine** | **Manifest Seal & Key Hygiene** | Verifies Producer Root ECDSA P-256 seal on `manifest.json`; recomputes SHA-256 of every file; blocks path traversal (`../../`) and unmanifested files; rejects any bundled private keys (`*private*`, `*.key`). |
+| **2** | **Core Engine** | **Device Cert, Silicon & Metrology** | Verifies Root signature on `device_certificate.json`; binds `device/public_key.pem` and derived `device_id`; verifies `ATECC608B` attestation key hash (rejecting software stubs via `--require-hardware-attestation`); validates legal metrology standard (`EU_MID_2014_32_EU` / `EU_Directive_2014_31_EU_NAWI`). |
+| **3** | **Core Engine** | **Observation Signatures & Window** | Verifies NIST P-256 signature on every observation record; dynamically enforces that every record timestamp falls inside both certificate validity and sensor `calibration_valid_until`. |
+| **4** | **Core Engine** | **Hash-Chain Continuity** | Verifies genesis zero-hash (`sequence == 1`) and unbroken `prev_hash[i] == SHA-256(canonical_json(record[i-1]))`, sequence `+1`, unique IDs, and monotonic timestamps. |
+| **5** | **Profile Hook** | **Process Continuity Invariant** | **Pluggable Hook (`check5_hook`):** Enforces per-record physical continuity (e.g., dual-register meter delta `Δ cumulative_wh == interval_wh` or continuous minimum temperature $T_{\min} \ge 500^\circ\text{C}$). |
+| **6** | **Core Engine** | **Claim Bounds & Replay Ledger** | Matches stream `first_sequence`, `last_sequence`, record/batch count, and `terminal_hash` to `claim.json`. Enforces cross-claim deduplication via `--claim-ledger` to block double-counting. |
+| **7** | **Core Engine** | **W3C PROV-O Lineage** | Validates `provenance/provenance.json` entity SHA-256 digests and transformation recipe bindings. |
+| **8** | **Profile Hook** | **Pinned Authority Reference** | **Pluggable Hook (`check8_hook`):** Verifies SHA-256 digests and statutory bounds of external reference files in `reference_data/` against the auditor's out-of-band `trusted_references.json`. |
+| **9** | **Profile Hook** | **Conservation & Recomputation** | **Pluggable Hook (`check9_hook`):** Evaluates domain conservation inequalities in scaled integer arithmetic (mass balance, energy balance, conversion yield ceilings, delivery caps) and recomputes claim metrics. |
+| **10** | **Core Engine** | **Zero-Tolerance Reconciliation** | Asserts exact bit-for-bit equality between Check 9 recomputed integer metrics and declared values in `claim.json`. |
 
 ---
 
-## Physical-to-Digital Boundary & Fraud Defense Architecture
+## 3. Pluggable Profile Architecture: How Any Domain Plugs Into the Engine
 
-In industrial IoT and digital Measurement, Reporting, and Verification (dMRV), cryptographically securing data *after* it enters a gateway is necessary, but insufficient on its own. A trustworthy architecture must defend the **physical-to-digital boundary**—the physical seam between plant machinery and electrical sensors where real-world manipulation occurs.
+Any industrial sector—such as green hydrogen electrolysis, district heating, EV fleet charging, industrial water treatment, electrical submetering, or carbon dioxide removal—can plug into the core engine without modifying the cryptographic container or core verifier checks.
 
-Verifiable Telemetry categorizes and mitigates the five universal edge fraud classes:
+A domain profile driver consists of **three declarative components**:
+1. **Canonical Integer Observation Schema (`observations/observations.ndjson`):** Defines the signed integer telemetry fields (`Wh`, `g`, `°C`, `bps` where $10{,}000\text{ bps} = 100.00\%$), eliminating IEEE 754 floating-point drift across Python, Rust, and C.
+2. **Pinned Authority Registry Entry (`src/verifier/trusted_references.json`):** Pins out-of-band SHA-256 digests for authoritative reference datasets (e.g., national grid factors, ISO 17025 lab assays, delivery manifests) and statutory `methodology_parameters`.
+3. **Profile Driver Registration (`SUPPORTED_PROFILE_DRIVERS` in `verify_bundle.py`):** Maps the profile identifier in `claim.json` to its Check 5, Check 8, and Check 9 hooks.
+
+Inspect the registered profile drivers directly via the CLI:
+```bash
+python3 src/verifier/verify_bundle.py --list-profiles
+```
+```text
+======================================================================
+ Universal Verifiable Telemetry Engine — Registered Profile Drivers
+======================================================================
+[*] Profile ID  : energy_submetering
+    Description : Industrial Electrical Submetering & Scope 2 GHG (EU MID 2014/32/EU & CSRD)
+    Metrology   : EU_MID_2014_32_EU (Class A/B/C, EN 50470-3)
+    Check 5 Hook: Dual-register cumulative vs. interval Wh delta continuity
+    Check 8 Hook: Pinned national grid emission factor SHA-256 registry match
+    Check 9 Hook: Deterministic integer Wh summation & Scope 2 kg CO2e recomputation
+----------------------------------------------------------------------
+[*] Profile ID  : biochar_pyrolysis
+    Description : High-Durability Pyrolysis Mass-Balance & Thermal Verification (EU NAWI 2014/31/EU & CRCF)
+    Metrology   : EU_Directive_2014_31_EU_NAWI (Class I/II/III) + Type-K Thermocouple
+    Check 5 Hook: Continuous thermal floor invariant (temp_min_c >= min_pyrolysis_temp_c)
+    Check 8 Hook: Pinned ISO 17025 lab report & feedstock manifest SHA-256 registry match
+    Check 9 Hook: 6-part mass-balance conservation (dry <= input, max dry yield bps, delivery cap)
+----------------------------------------------------------------------
+```
+
+---
+
+## 4. Universal Physical-to-Digital Edge Threat Model
+
+Securing telemetry *after* it enters a gateway is insufficient if an insider can manipulate sensors or software registers *before* signing. The engine and its hardware deployment guidance address **five universal edge threat classes**:
 
 ```mermaid
 flowchart LR
-    subgraph VULN["Physical & Digital Edge Fraud Classes"]
-        V1["1. Register Shaving & Moisture Fraud\n(Interval manipulation / Water soaking)"]
-        V2["2. Process Parameter Tampering\n(Cold kiln undercooking / Sensor spoofing)"]
-        V3["3. Feedstock & Factor Adulteration\n(Coal dust / Preserved wood / Arbitrary grid factors)"]
-        V4["4. Host OS Compromise\n(Confused deputy attacking gateway)"]
-        V5["5. Double-Counting & Period Truncation\n(Replaying batches / Omitting high-emission hours)"]
+    subgraph THREATS["5 Universal Industrial Edge Threat Classes"]
+        T1["Class 1: Sensor & PLC Bus Spoofing\n(SCADA register overwrites)"]
+        T2["Class 2: Uncertified Sensor & Drift\n(Fake or expired calibration)"]
+        T3["Class 3: Reference Input Fraud\n(Self-attested factors / Lab swaps)"]
+        T4["Class 4: Gateway Host Compromise\n(Confused deputy / Software keys)"]
+        T5["Class 5: Stream Truncation & Replay\n(Dropping peaks / Double counting)"]
     end
 
-    subgraph DEF["Cryptographic & Physical Defenses"]
-        D1["Dual-Register Delta Invariant +\nNet Dry Mass & Mass Conservation Trap"]
-        D2["Direct Safe-Zone Isolated Wire Tap +\nMulti-Zone Sensor Fusion + Invariant Checks"]
-        D3["Pinned ISO 17025 Assays (14C Dating) +\nAuditor-Pinned Reference Registry"]
-        D4["Hardware Secure Boot +\nSilicon Key Slot Isolation + Tamper Zeroization"]
-        D5["Sequential Hash-Chaining +\nAuditor Claim Ledger Deduplication"]
+    subgraph DEFENSES["Engine & Hardware Boundary Defenses"]
+        D1["2.5 kV Isolated RS-485 Wire Tap +\nCheck 5 Process Continuity Hooks"]
+        D2["Check 2 EU MID/NAWI Pedigree +\nCheck 3 Dynamic Calibration Window"]
+        D3["Check 8 Pinned Authority Registry +\nCheck 9 Integer Conservation Traps"]
+        D4["Check 2 Silicon Attestation Binding +\n--require-hardware-attestation"]
+        D5["Check 4 Genesis Hash-Chain +\nCheck 6 --claim-ledger Deduplication"]
     end
 
-    V1 ==> D1
-    V2 ==> D2
-    V3 ==> D3
-    V4 ==> D4
-    V5 ==> D5
+    T1 ==> D1
+    T2 ==> D2
+    T3 ==> D3
+    T4 ==> D4
+    T5 ==> D5
 ```
 
-### 1. Register Shaving & Moisture / Mass Fraud
-* **The Attack:** In energy submetering, an operator manipulates interval telemetry registers to report lower peak-demand electricity usage while cumulative registers count up. In biomass/biochar, water quenching is physically required for fire safety as char exits at $>500^\circ\text{C}$; a dishonest operator hoses down the output pile with excess water to artificially inflate scale weight ($M_{\text{wet}}$).
-* **The Restack Defense:**
-  1. *Dual-Register Integer Consistency (Energy):* Verifier Check 9 asserts that cumulative meter register deltas strictly match interval sums: `Δ cumulative_wh == Σ interval_wh` (**Attack I2 Caught**).
-  2. *Strict Net Dry Mass Quantification (Biochar):* Carbon credits are never awarded on scale weight. Credits are calculated strictly on dry mass:
-     $$M_{\text{dry}} = M_{\text{wet}} \times (1 - \text{moisture})$$
-     Programmatically calculated via integer basis points: `M_dry = M_wet * (10000 - moisture_bps) // 10000`.
-  3. *The Inescapable Mass Conservation Trap:* Excess water spraying elevates laboratory moisture assays (e.g., 35.00%), automatically discounting wet mass. If an operator attempts to forge the lab assay to declare artificially low moisture, the resulting calculated dry mass mathematically violates the first law of thermodynamics:
-     $$M_{\text{dry}} > M_{\text{feedstock}}$$
-     Verifier Check 9 enforces aggregate mass conservation and a statutory **40.00% maximum dry yield bound** pinned in `trusted_references.json` (**Attacks B1, B15 & B16 Caught**).
-
-### 2. Process Parameter Tampering & Analog Sensor Spoofing
-* **The Attack:** Silicon microchips melt above $125^\circ\text{C}$; therefore, physical sensors inside industrial reactors (kilns, furnaces) must be analog thermocouples (Type-K). An operator runs a kiln at an energy-saving $350^\circ\text{C}$ (producing unstable charcoal rather than permanent biochar), manipulating SCADA/PLC software registers or placing a localized blowtorch on a probe tip.
-* **The Restack Defense:**
-  1. *Direct Safe-Zone Wire Tapping:* The edge gateway resides inside a locked electrical cabinet in the safe zone ($<55^\circ\text{C}$), tapping the physical RS-485 Modbus wire directly using 2.5 kV galvanically isolated transceivers. This bypasses the plant SCADA/PLC software entirely, preventing register override.
-  2. *Continuous Invariant Enforcement (Check 5):* The verifier inspects minimum operating parameters across every batch observation. Any batch where $T_{\min} < 500^\circ\text{C}$ causes an immediate fail-closed audit rejection (**Attack B2 Caught**).
-  3. *Multi-Zone Sensor Fusion:* Tapping multi-point thermocouple arrays and cross-correlating temperature with induced draft fan current draw and differential pressure detects localized probe spoofing.
-
-### 3. Feedstock & Factor Adulteration (The "Garbage In" Problem)
-* **The Attack:** Physical scales measure gravitational mass, not chemical composition. An operator blends cheap fossil coal dust, lignite, or toxic demolition wood treated with Chromated Copper Arsenate (CCA) into biomass feed to multiply carbon yield at low cost. In energy, operators cherry-pick outdated or favorable grid emission factors to greenwash Scope 2 emissions.
-* **The Restack Defense:**
-  1. *Auditor-Pinned Reference Registry (Check 8):* All lab assays and grid factors must match SHA-256 digests pinned in the auditor's independent reference registry (`trusted_references.json`), neutralizing post-hoc modifications (**Attacks I1 & B3 Caught**).
-  2. *$^{14}\text{C}$ Radiocarbon Isotopic Dating:* Biogenic biomass contains $100\%\text{ Fraction Modern Carbon}$ ($^{14}\text{C}$), whereas fossil coal has zero $^{14}\text{C}$ due to radioactive decay over millions of years ($t_{1/2} = 5,730\text{ years}$). Fossil fuel adulteration is immediately caught in mandatory ISO 17025 assays.
-  3. *Cumulative Feedstock Quota Capping (Check 9):* Cumulative feedstock across verified batches cannot exceed the total verified biomass quota on the delivery manifest, preventing ghost-truck double billing (**Attacks B4 & B8 Caught**).
-
-### 4. Host OS Compromise (The Confused Deputy Attack)
-* **The Attack:** The Microchip ATECC608 secure element prevents private key extraction via physical side-channel resistance. However, an attacker who compromises the gateway Linux host could instruct the secure element to sign forged telemetry.
-* **The Restack Defense:**
-  1. *Hardware Secure Boot:* The host processor bootloader verifies the digital signature of the kernel and firmware against ROM-fused manufacturer keys before execution.
-  2. *Cabinet Tamper Detection & Key Zeroization:* The gateway is housed in a locked control cabinet with chassis intrusion microswitches. Physical intrusion triggers hardware zeroization, permanently erasing private keys locked in silicon slot 0 (**Attack B7 Caught**).
-
-### 5. Double Counting, Period Truncation & Downstream Leakage
-* **The Attack:** An operator re-issues the same telemetry under multiple claim IDs, drops low-efficiency or high-emission intervals, or burns sequestered biochar as fuel after minting credits.
-* **The Restack Defense:**
-  1. *Cryptographic Hash-Chain Continuity (Check 4):* Sequential `prev_hash` links make record dropping or interval splicing mathematically impossible without breaking the chain (**Attacks O3 & I5 Caught**).
-  2. *Auditor Claim Ledger (Check 6):* Offline ledger checking (`--claim-ledger PATH`) tracks batch IDs and terminal hashes across evidence bundles, preventing cross-claim double-counting (**Attacks B14 & O4 Caught**).
-  3. *W3C PROV-O Downstream Lineage:* Evidence bundles bind GPS-stamped field application receipts, proving permanent soil incorporation or concrete encapsulation before credit retirement.
-
----
-
-## Scope Boundary Matrix: What Cryptography Enforces vs Physical Metrology
-
-| Fraud Vector | Can Software / Math Alone Solve It? | In-Scope Restack Cryptographic Defense | Complementary Physical / Metrological Control |
-|---|:---:|---|---|
-| **Register Shaving (Energy)** | Yes | **Check 9 Invariant:** Cumulative delta matches interval sum (`Δ cum == Σ int`) | EU MID Class B calibrated meter with factory lead seals |
-| **Water Spraying (Biochar)** | No (cannot stop physical water hoses) | **Net Dry Mass Formula** + **Check 9 Mass Conservation Trap** ($M_{\text{dry}} \le M_{\text{feedstock}}$) | Composite sampling under ISO 17025 laboratory protocol |
-| **Cold Process / Reactor Undercooking** | Yes | **Check 5 Invariant:** Continuous $T_{\min} \ge 500^\circ\text{C}$ signed at source; fails closed | Direct Modbus RS-485 tap inside safe-zone cabinet + Sensor Fusion |
-| **Fossil Fuel / Adulterated Feedstock** | No (scales measure mass, not chemistry) | **Check 8 Pinned Reference Match:** Lab assay digest pinned in auditor registry | ISO 17025 $^{14}\text{C}$ radiocarbon dating & ICP-MS metal screening |
-| **Scale / Meter Calibration Drift** | Yes | **Check 2 Metrological Pedigree:** EU MID / NAWI certificate validity binding | Periodic physical recalibration by accredited metrology authorities |
-| **Dropping Failed / High-Emission Batches** | Yes | **Check 4 Hash-Chain Continuity:** Sequential `prev_hash` prevents record omission | Monotonic hardware sequence counters locked in ATECC608 silicon |
-| **Post-Hoc Spreadsheet / DB Edits** | Yes | **Check 1 Bundle Seal:** Producer Root signature over canonical SHA-256 manifest | eIDAS Qualified Electronic Seal / Enterprise PKI trust anchor |
-| **Sensor Cable Disconnection / Spoofing** | Partial | **Direct Cabinet Tapping:** Bypasses SCADA software registers; 2.5 kV galvanic isolation | Armored conduit, locked cabinet, chassis intrusion tamper switches |
-| **Double-Counting / Cross-Claim Replay** | Yes | **Check 6 Claim Ledger:** Programmatic deduplication of batch IDs and terminal hashes | Cross-registry serial retirement protocols (Puro, EBC, national registries) |
+| Threat Class | Attack Vector | In-Scope Engine & Cryptographic Defense | Complementary Physical / Institutional Control |
+|---|---|---|---|
+| **1. Bus Spoofing ("Last Foot")** | Overwriting PLC/SCADA registers or spoofing single probes | **Check 5 Continuity Hook:** Enforces dual-register delta (`Δ cumulative_wh == interval_wh`) or thermal floor ($T_{\min} \ge 500^\circ\text{C}$) | Direct 2.5 kV galvanically isolated RS-485 tap ahead of PLC + multi-sensor correlation |
+| **2. Metrology Drift** | Swapping in uncertified sensors or operating past calibration expiry | **Checks 2 & 3 Metrology Binding:** Validates EU MID / NAWI standard and enforces `timestamp <= calibration_valid_until` | Physical lead seals and periodic calibration by accredited national metrology institutes |
+| **3. Reference Fraud ("Garbage In")** | Swapping emission factors, inflating moisture weight, or faking assays | **Check 8 Pinned Registry & Check 9 Conservation:** Out-of-band SHA-256 digest pinning + integer conservation inequalities | ISO 17025 accredited lab assays ($^{14}\text{C}$ dating, moisture, ICP-MS) & official grid registries |
+| **4. Confused Deputy** | Signing synthetic data with software keys or compromised gateway OS | **Check 2 Silicon Attestation:** Verifies `attested_public_key_sha256` and rejects stubs via `--require-hardware-attestation` | ATECC608B / TPM 2.0 hardware key isolation, Secure Boot, cabinet tamper zeroization |
+| **5. Truncation & Replay** | Omitting peak intervals or re-submitting valid bundles across audits | **Checks 4 & 6 Continuity & Ledger:** Unbroken `prev_hash` chain + `--claim-ledger` cross-claim deduplication | External RFC 3161 timestamping / public transparency log anchoring |
 
 ### The "Collusion-Forcing" Security Thesis
-> **Core Principle:** Verifiable Telemetry does not claim to eliminate all physical reality exploits. Instead, it alters the economic and operational attack surface:
-> * **Today:** Operators commit multi-million-euro energy or carbon fraud with **zero physical traces** by altering an Excel cell, modifying an unauthenticated SQL database row, or re-exporting a CSV.
-> * **With Verifiable Telemetry:** Fraud is elevated to **criminal hardware tampering or multi-party institutional collusion**. To fraudulently mint claims, an operator must physically break into a locked cabinet, defeat hardware secure boot, violate thermodynamic mass/energy conservation, and bribe an independent ISO 17025 accredited testing laboratory (an accredited lab) to falsify isotopic radiocarbon dating.
+> *"We do not claim that cryptography alone replaces physical reality. Instead, the engine eliminates costless digital fraud—forcing any prospective attacker out of mutable spreadsheets and SQL databases and into high-risk physical hardware tampering or multi-party institutional collusion across hardware manufacturers, national metrology institutes, and ISO 17025 accredited laboratories."*
 
 ---
 
-## Proving Grounds: Why Energy Submetering and Carbon Removals Validate the Protocol
+## 5. Reference Profile Drivers (Proving Grounds)
 
-This project deliberately implements two distinct reference profiles to demonstrate that the protocol is universal across industrial physics:
+To prove that the core engine is genuinely domain-agnostic, the repository ships with **two reference profile drivers** spanning the two primary physical measurement paradigms in industrial telemetry:
 
-```mermaid
-flowchart TD
-    subgraph P1["Profile 1: Industrial Energy Submetering (EU MID / CSRD)"]
-        ENERGY["Continuous Linear Metrology\n- EU MID Class B legal metrology\n- Dual-register cumulative Wh consistency\n- Pinned national ISPRA grid emission factors"]
-    end
-
-    subgraph P2["Profile 2: High-Durability Carbon Removals (EU NAWI / CRCF)"]
-        BIOCHAR["Thermodynamic Mass & Thermal Transformation\n- EU NAWI Class III weighing scales\n- Continuous Type-K thermocouple permanence (T ≥ 500°C)\n- Chemical mass-balance invariants & ISO 17025 assays"]
-    end
-
-    subgraph CORE["Universal Verifiable Telemetry Protocol"]
-        ROUT["1. Safe-Zone Hardware RoT (ATECC608 / TPM2 / Isolated RS-485)"]
-        PACK["2. Deterministic Packaging & W3C PROV-O Evidence Lineage"]
-        VERIF["3. Zero-Dependency 10-Check Offline Verifier CLI"]
-    end
-
-    CORE ==> P1
-    CORE ==> P2
-```
-
-1. **Profile 1: Industrial Energy Submetering (`energy_submetering`):**
-   * **The Physical Flow:** Continuous, linear flow of electrons through active meters.
-   * **The Statutory Driver:** Mandatory corporate reporting under the EU Corporate Sustainability Reporting Directive (**CSRD Directive 2022/2464**) and Energy Performance of Buildings Directive (**EPBD**).
-   * **Validation Goal:** Proves that high-frequency interval readings match immutable cumulative registers (`Δ cumulative_wh == interval_wh`) with pinned national grid emission factors.
-
-2. **Profile 2: High-Durability Carbon Removals (`biochar_pyrolysis`):**
-   * **The Physical Flow:** Non-linear chemical and thermal transformation of solid biomass into stable porous carbon.
-   * **The Statutory Driver:** High-value permanent removals under the EU Carbon Removal Certification Framework (**EU CRCF Delegated Regulation 2026/285**) and **Puro.earth**, trading at **€100–€200/tonne $\text{CO}_2$**.
-   * **Validation Goal:** Proves that the protocol enforces rigid thermodynamic conservation laws ($M_{\text{dry}} \le M_{\text{feedstock}}$), high-temperature process invariants ($T_{\min} \ge 500^\circ\text{C}$), and third-party laboratory assay digests.
+1. **Reference Driver 1: `energy_submetering` (Continuous Linear Flow)**
+   * **Physical Paradigm:** Continuous, monotonic electrical energy accumulation ($E_{\text{cum}}[i] - E_{\text{cum}}[i-1] = E_{\text{int}}[i]$).
+   * **Standards & Metrology:** EU Measuring Instruments Directive (**2014/32/EU MID Class B**, EN 50470-3) and EU **CSRD** Scope 2 accounting.
+   * **Engine Hooks Validated:** Dual-register delta conservation (`Check 5`), pinned national grid emission factor digests (`Check 8`), and exact integer Watt-hour summation (`Check 9`).
+2. **Reference Driver 2: `biochar_pyrolysis` (Non-Linear Mass & Thermal Transformation)**
+   * **Physical Paradigm:** Multi-sensor batch material conversion involving moisture evaporation, thermal thresholds, and stoichiometric transformation.
+   * **Standards & Metrology:** EU Non-Automatic Weighing Instruments Directive (**2014/31/EU NAWI Class III**), Type-K thermocouple arrays, ISO 17025 chemical assays, and **EU CRCF** (Regulation (EU) 2024/3012 / Delegated Regulation (EU) 2026/285).
+   * **Engine Hooks Validated:** Continuous thermal floor $T_{\min} \ge 500^\circ\text{C}$ (`Check 5`), pinned ISO 17025 lab report and feedstock delivery digests (`Check 8`), and 6-part first-law mass conservation ($M_{\text{dry}, i} \le M_{\text{feedstock}, i}$, $\le 40.00\%$ dry yield ceiling, cumulative delivery cap, and integer basis-point stoichiometry in `Check 9`).
 
 ---
 
-## Key Architectural Features
+## 6. Quickstart Guide
 
-1. **Zero External Dependencies:** Built entirely with Python 3 standard library and native POSIX OpenSSL CLI (`openssl dgst -sha256`). Runs in air-gapped auditor enclaves without `pip install`.
-2. **Sequential Cryptographic Hash-Chains:** Each reading embeds `prev_hash`, preventing head/tail truncation, record reordering, and telemetry splicing.
-3. **Statutory Thermodynamic & Process Invariants:** Enforces physical mass conservation ($M_{\text{dry}} \le M_{\text{feedstock}}$), thermal permanence ($T_{\min} \ge 500^\circ\text{C}$), and dual-register energy deltas (`Δ cumulative_wh == interval_wh`).
-4. **Metrological Pedigree Binding:** Cryptographically binds sensor model, NAWI 2014/31/EU / MID 2014/32/EU accuracy class, and factory calibration validity into the signed device certificate.
-5. **Auditor-Pinned Reference Data:** Independent verification against pinned registry digests (`trusted_references.json`), neutralizing insider emission factor or laboratory assay manipulation.
-6. **Deterministic Canonicalization (RFC 8785 in M1):** Current prototype enforces strict integer accounting (grams, degrees Celsius, basis points, Watt-hours) with deterministic key-sorted JSON; RFC 8785 (JCS) canonicalization will be fully implemented in Milestone 1.
-7. **W3C PROV-O Cryptographic Lineage:** Unbroken provenance graph recording entities, activities, and cryptographic transformations from raw sensor telemetry to final registered claims.
-8. **Auditor Claim Ledger (Double-Counting Defense):** Offline ledger support (`--claim-ledger PATH --record-ledger`) prevents cross-claim replay of batch IDs and terminal hashes across evidence bundles.
-9. **Auditor-Controlled Methodology Parameters:** Top-level `methodology_parameters` in `trusted_references.json` enforce statutory thresholds (e.g. 40% maximum dry yield, 500°C minimum temperature, 1.2 t process deductions) fail-closed.
+### Prerequisites
+- Python 3.9+ and OpenSSL 3.x (standard on macOS and Linux)
+- **Zero third-party pip dependencies**
 
----
-
-## Quickstart Guide
-
-### 1. Prerequisites
-- Python 3.9+
-- OpenSSL 3.x (native on macOS / Linux)
-- Zero third-party pip dependencies required.
-
-### 2. Profile 1: Industrial Energy Submetering (EU MID / CSRD)
-
-Continuous linear electrical metrology with dual-register consistency:
-
+### Run Reference Driver 1: `energy_submetering` (Continuous Linear Flow)
 ```bash
-# Step 1: Simulate MID Class B electrical submeter edge gateway
+# 1. Simulate EU MID Class B submeter gateway (hardware attestation + prev_hash signing)
 python3 src/device_simulator/mock_edge.py
 
-# Step 2: Transform cumulative Wh, link ISPRA grid factor, and seal evidence bundle
+# 2. Package energy observations, W3C PROV-O lineage, and root-sealed manifest
 python3 src/pipeline/claim_generator.py
 
-# Step 3: Run independent zero-trust auditor verifier (10 fail-closed checks)
+# 3. Verify bundle offline (7 Core Engine Checks + 3 Energy Profile Hooks)
 python3 src/verifier/verify_bundle.py claim_bundle/ --company-key company_root_public_key.pem
 ```
 
-Expected energy submetering verifier output:
-```text
-======================================================================
- Independent Offline Verifier — Zero-Trust Claim Audit (v1.1)
- Specification: 02_protocol/evidence_bundle_spec.md
-======================================================================
-[*] Target Claim Bundle : claim_bundle/
-[*] Company Trust Anchor: company_root_public_key.pem
-----------------------------------------------------------------------
-[Check 1/10] Manifest Integrity & Cryptographic Seal  : [PASSED]
-[Check 2/10] Device Certificate & Hardware Attestation: [PASSED]
-[Check 3/10] Observation Signatures & Temporal Bounds : [PASSED] (5 records)
-[Check 4/10] Cryptographic Hash-Chain Continuity    : [PASSED]
-[Check 5/10] Sequence Continuity & Dual Registers   : [PASSED]
-[Check 6/10] Claim Period Boundary Enforcement      : [PASSED]
-[Check 7/10] Transformation & Provenance Lineage     : [PASSED]
-[Check 8/10] Authoritative Reference Factor Pinning : [PASSED]
-[Check 9/10] Independent Integer Wh Recomputation  : [PASSED]
-[Check 10/10] Numeric Claim Reconciliation (Zero-Tol): [PASSED]
-----------------------------------------------------------------------
- FORMAL AUDIT VERIFICATION SUMMARY
-----------------------------------------------------------------------
-  * Observations (Telemetry) : Declared origin verified (5 records, unbroken hash-chain)
-  * Reference Factor          : Provenance verified (Pinned ISPRA 0.275 kg CO2e/kWh)
-  * Independent Recomputation : Total Energy  = 12500 Wh (12.5 kWh)
-                                Total Scope 2 = 3.4375 kg CO2e
-----------------------------------------------------------------------
-[AUDIT VERDICT: PASSED]
-  Status: Declared origin verified. Calculation lineage verified.
-  All 10 specification checks passed without exception.
-======================================================================
-```
-
-### 3. Profile 2: High-Durability Carbon Removals (EU NAWI / CRCF)
-
-Thermodynamic mass conservation, continuous thermal permanence, and ISO 17025 lab binding:
-
+### Run Reference Driver 2: `biochar_pyrolysis` (Non-Linear Mass & Thermal Transformation)
 ```bash
-# Step 1: Simulate edge gateway tapping Type-K thermocouple + certified scale indicator (NAWI)
+# 1. Simulate EU NAWI Class III scale + Type-K thermocouple gateway
 python3 src/device_simulator/mock_biochar_edge.py
 
-# Step 2: Ingest telemetry stream, bind ISO 17025 lab report + FSC biomass manifest, and seal bundle
+# 2. Package batch observations, ISO 17025 lab assay, mass-balance recipes, and root seal
 python3 src/pipeline/biochar_claim_generator.py
 
-# Step 3: Run independent zero-trust auditor verifier (10 fail-closed checks)
+# 3. Verify bundle offline (7 Core Engine Checks + 3 Pyrolysis Profile Hooks)
 python3 src/verifier/verify_bundle.py biochar_bundle/ --company-key producer_root_public_key.pem
 ```
 
-Expected biochar verifier output:
-```text
-======================================================================
- Independent Offline Verifier — Zero-Trust Biochar dMRV Audit (v1.2)
- Specification: 02_protocol/evidence_bundle_spec.md (biochar_pyrolysis)
- Standards: EU CRCF Delegated Regulation 2026/285 | Puro.earth | EBC
-======================================================================
-[*] Target Claim Bundle : biochar_bundle/
-[*] Trust Anchor (Root) : producer_root_public_key.pem
-----------------------------------------------------------------------
-[Check 1/10] Manifest Integrity & Producer Bundle Seal : [PASSED]
-[Check 2/10] Device Certificate & Scale Metrology (NAWI): [PASSED]
-[Check 3/10] Batch Signatures & Temporal Bounds (ECDSA) : [PASSED] (5 batches)
-[Check 4/10] Cryptographic Hash-Chain Continuity         : [PASSED]
-[Check 5/10] Pyrolysis Thermal Permanence (T >= 500°C)  : [PASSED]
-[Check 6/10] Claim Batch Boundary Bounds Enforcement    : [PASSED]
-[Check 7/10] Transformation & W3C PROV-O Lineage Graph  : [PASSED]
-[Check 8/10] Authoritative Reference Registry Pinning   : [PASSED]
-[Check 9/10] Mass-Balance Invariants & CRCF Recomputation: [PASSED]
-[Check 10/10] Numeric Claim Reconciliation (Zero-Tol): [PASSED]
-----------------------------------------------------------------------
- FORMAL AUDIT VERIFICATION SUMMARY (EU CRCF / PURO.EARTH)
-----------------------------------------------------------------------
-  * Batches Ingested          : 5 batches (Unbroken hash-chain)
-  * Thermal Permanence        : Confirmed (All batches >= 500°C)
-  * Mass Balance Proof        : Net Dry Biochar = 8.500 tonnes
-  * Net Carbon Sequestered    : 20.523166 t CO2 (20523166 g)
-----------------------------------------------------------------------
-[AUDIT VERDICT: PASSED]
-  Status: Declared origin verified. Permanence verified. Lineage verified.
-  All 10 specification checks passed without exception.
-======================================================================
-```
-
 ---
 
-## Adversarial Benchmark & Attack Suites
+## 7. Adversarial Benchmark & Security Regression Suites (33/33 Caught)
 
-The pipeline includes comprehensive adversarial test suites programmatically asserting fail-closed rejection of **33 distinct fraud vectors**:
+The engine is validated by **33 automated adversarial tests** plus a **6-exploit security re-audit regression harness (`P1–P6`)**, proving fail-closed rejection across outsider, insider, and multi-sensor physical attack vectors:
 
 ```bash
-# Run biochar pyrolysis dMRV adversary suite (17 attack vectors)
-python3 src/attacks/biochar_attacks.py
-
-# Run outsider adversary suite (11 attack vectors)
+# 1. Run Core Engine Outsider Adversary Suite (11 attack vectors: O1–O11)
 python3 src/attacks/outsider_attacks.py
 
-# Run insider corporate fraud suite (5 attack vectors)
+# 2. Run Core & Linear Flow Insider Fraud Suite (5 attack vectors: I1–I5)
 python3 src/attacks/insider_fraud_suite.py
+
+# 3. Run Multi-Sensor Non-Linear Transformation Stress Suite (17 attack vectors: B1–B17)
+python3 src/attacks/biochar_attacks.py
+
+# 4. Run Security Re-Audit Regression Harness (6 PoC exploit regressions: P1–P6)
+python3 04_experiments/security_reaudit/poc_exploits.py
 ```
 
-### Biochar dMRV Adversary Matrix (17/17 Caught)
-| ID | Attack Vector | Verifier Defense | Verdict |
-|---|---|---|:---:|
-| **B1** | Water Spraying / Moisture Inflation Fraud | Physical mass-balance conservation invariant ($M_{\text{dry}} \le M_{\text{feedstock}}$) | ❌ Caught |
-| **B2** | Thermal Undercooking ($T_{\min} < 500^\circ\text{C}$) | EU CRCF statutory thermal permanence invariant | ❌ Caught |
-| **B3** | Counterfeit Lab Report (ISO 17025 Violation) | Auditor pinned reference registry validation | ❌ Caught |
-| **B4** | Feedstock Cap Exhaustion (Used > Quota) | Cumulative biomass delivery manifest cap enforcement | ❌ Caught |
-| **B5** | Dropped Batch / Selective Omission | Sequential cryptographic hash-chain continuity (`prev_hash`) | ❌ Caught |
-| **B6** | Non-Certified Scale Indicator | EU Directive 2014/31/EU NAWI legal metrology check | ❌ Caught |
-| **B7** | Software Key without Silicon Attestation | Hardware attestation descriptor verification | ❌ Caught |
-| **B8** | Uncertified Biomass Source | EBC positive list & pinned manifest registry verification | ❌ Caught |
-| **B9** | Numeric Claim Inflation | Recomputed stoichiometry vs declared claim zero-tolerance match | ❌ Caught |
-| **B10** | Revoked Kiln Gateway Rejection | Pinned `--revoked` device list enforcement | ❌ Caught |
-| **B11** | Private Key File Inside Bundle / Manifest | Check 1 zero-tolerance private key rejection | ❌ Caught |
-| **B12** | Rogue Software Device Key (Cert-Key Binding Break) | Check 2 public key & derived device ID binding | ❌ Caught |
-| **B13** | Scale Calibration Expired Before Batches | Check 3 dynamic NAWI scale calibration temporal check | ❌ Caught |
-| **B14** | Double-Counting Re-issue Under New Claim ID | Check 6 auditor claim ledger double-counting check | ❌ Caught |
-| **B15** | Per-Batch Mass Balance Violation (Dry > Feedstock) | Check 9 per-batch mass conservation enforcement | ❌ Caught |
-| **B16** | Excessive 95% Dry Yield (Pyrolysis Bound) | Check 9 methodology parameter max dry yield bound ($\le 40\%$) | ❌ Caught |
-| **B17** | Software Simulator Key Rejection | Strict Hardware Attestation enforcement (`--require-hardware-attestation`) | ❌ Caught |
+### 7.1 Core Engine Outsider Adversary Matrix (`O1–O11` — 11/11 Caught)
+| ID | Attack Vector | Core Engine Defense | Check | Verdict |
+|:---:|---|---|:---:|:---:|
+| **O1** | Falsified Telemetry Value | NIST P-256 ECDSA observation signature failure | Check 3 | ❌ Caught |
+| **O2** | Rogue Uncertified Public Key | Producer Root certificate signature & key-binding failure | Check 2 | ❌ Caught |
+| **O3** | Dropped Middle Observation | Monotonic sequence (`+1`) and `prev_hash` chain failure | Check 4 & 5 | ❌ Caught |
+| **O4** | Duplicate Replay Observation | Sequence monotonicity and duplicate ID detection | Check 4 & 5 | ❌ Caught |
+| **O5** | Envelope Device ID Spoofing | Public key SHA-256 fingerprint mismatch vs certified `device_id` | Check 2 & 3 | ❌ Caught |
+| **O6** | Out-of-Bounds Timestamp | Temporal window check vs certificate `valid_from` / `valid_until` | Check 3 | ❌ Caught |
+| **O7** | Re-Hashed Manifest Bypass | Producer Root Bundle Seal ECDSA verification failure | Check 1 | ❌ Caught |
+| **O8** | Path Traversal Injection (`../../`) | Strict relative path normalization and bundle root jail | Check 1 | ❌ Caught |
+| **O9** | Unmanifested File Injection | Bidirectional filesystem-to-manifest inventory check | Check 1 | ❌ Caught |
+| **O10** | Revoked Gateway Key | Pinned `--revoked` device revocation list enforcement | Check 2 | ❌ Caught |
+| **O11** | Private Key Material in Bundle | Zero-tolerance private key scanner across disk and manifest | Check 1 | ❌ Caught |
 
-### Outsider Adversary Matrix (11/11 Caught)
-| ID | Attack Vector | Verifier Defense | Verdict |
-|---|---|---|:---:|
-| **O1** | Falsified Reading Value | NIST P-256 ECDSA observation signature failure | ❌ Caught |
-| **O2** | Rogue Uncertified Public Key | Company root certificate chain validation failure | ❌ Caught |
-| **O3** | Dropped Observation Record | Monotonic sequence check and hash-chain failure | ❌ Caught |
-| **O4** | Duplicate Replay Record | Sequence uniqueness check | ❌ Caught |
-| **O5** | Envelope Device ID Mismatch | Device ID consistency check vs certificate | ❌ Caught |
-| **O6** | Expired / Future Timestamp | Temporal window check vs certificate validity | ❌ Caught |
-| **O7** | Re-hashed Manifest Bypass | Company root bundle seal signature failure | ❌ Caught |
-| **O8** | Path Traversal Injection (`../../`) | Strict relative path schema validation | ❌ Caught |
-| **O9** | Unmanifested File Injection | Zero-tolerance bundle inventory check | ❌ Caught |
-| **O10** | Revoked Gateway Rejection | Pinned `--revoked` device list enforcement | ❌ Caught |
-| **O11** | Private Key Material Inside Bundle | Check 1 zero-tolerance private key rejection | ❌ Caught |
+### 7.2 Core & Linear Flow Insider Fraud Matrix (`I1–I5` — 5/5 Caught)
+| ID | Attack Vector | Engine & Profile Hook Defense | Check | Verdict |
+|:---:|---|---|:---:|:---:|
+| **I1** | Reference Factor Greenwashing + Reseal | Pinned Authority Registry SHA-256 digest check (`trusted_references.json`) | Check 8 | ❌ Caught |
+| **I2** | Dual-Register Interval Shaving | Process Continuity Hook: `Δ cumulative_wh == interval_wh` | Check 5 | ❌ Caught |
+| **I3** | Period Head/Tail Truncation | Claim declared sequence & period boundary enforcement | Check 6 | ❌ Caught |
+| **I4** | Unattested Software Simulator Key | Hardware attestation public-key SHA-256 binding check | Check 2 | ❌ Caught |
+| **I5** | Telemetry Splicing Across Shutdowns | Sequential cryptographic `prev_hash` chain continuity | Check 4 | ❌ Caught |
 
-### Insider Corporate Fraud Matrix (5/5 Caught)
-| ID | Attack Vector | Verifier Defense | Verdict |
-|---|---|---|:---:|
-| **I1** | Emission Factor Greenwashing + Reseal | Auditor pinned reference registry check | ❌ Caught |
-| **I2** | Dual-Register Interval Shaving | Meter register delta consistency check (`Δ cum == int`) | ❌ Caught |
-| **I3** | Period Head/Tail Truncation | Claim declared period boundaries vs audit mandate | ❌ Caught |
-| **I4** | Unattested Software Simulator Key | Silicon hardware attestation descriptor validation | ❌ Caught |
-| **I5** | Telemetry Splicing & Re-chaining | Sequential cryptographic hash continuity | ❌ Caught |
+### 7.3 Multi-Sensor Non-Linear Transformation Stress Matrix (`B1–B17` — 17/17 Caught)
+| ID | Attack Vector | Engine & Profile Hook Defense | Check | Verdict |
+|:---:|---|---|:---:|:---:|
+| **B1** | Moisture Weight Inflation Fraud | Conservation Hook: $M_{\text{dry}} \le M_{\text{feedstock}}$ violation | Check 9 | ❌ Caught |
+| **B2** | Thermal Floor Violation ($T_{\min} < 500^\circ\text{C}$) | Process Continuity Hook: continuous $T_{\min} \ge 500^\circ\text{C}$ | Check 5 | ❌ Caught |
+| **B3** | Unpinned / Forged Lab Assay | Reference Hook: ISO 17025 lab report SHA-256 digest mismatch | Check 8 | ❌ Caught |
+| **B4** | Input Delivery Quota Exhaustion | Conservation Hook: cumulative input $\le$ delivered manifest cap | Check 9 | ❌ Caught |
+| **B5** | Silent Batch Omission | Core Engine: sequential `prev_hash` chain break | Check 4 | ❌ Caught |
+| **B6** | Non-Metrological Weighing Scale | Core Engine: EU Directive 2014/31/EU NAWI Class I–III check | Check 2 | ❌ Caught |
+| **B7** | Tampered Silicon Attestation Hash | Core Engine: `attested_public_key_sha256` binding failure | Check 2 | ❌ Caught |
+| **B8** | Uncertified Input Material Code | Reference Hook: positive list & pinned manifest digest check | Check 8 | ❌ Caught |
+| **B9** | Declared Claim Metric Inflation | Core Engine: Check 10 zero-tolerance integer recomputation mismatch | Check 10 | ❌ Caught |
+| **B10** | Revoked Gateway Submission | Core Engine: `--revoked` device list enforcement | Check 2 | ❌ Caught |
+| **B11** | Private Key File Inside Bundle | Core Engine: Check 1 zero-tolerance private key hygiene failure | Check 1 | ❌ Caught |
+| **B12** | Unbound Software Device Key | Core Engine: Check 2 `cert_body.device_public_key` & ID binding | Check 2 | ❌ Caught |
+| **B13** | Expired Sensor Calibration Window | Core Engine: Check 3 dynamic `timestamp_end <= calibration_valid_until` | Check 3 | ❌ Caught |
+| **B14** | Cross-Claim Replay (Double Counting) | Core Engine: Check 6 offline `--claim-ledger` deduplication | Check 6 | ❌ Caught |
+| **B15** | Per-Batch Mass Conservation Breach | Conservation Hook: per-batch $M_{\text{dry}, i} \le M_{\text{feedstock}, i}$ | Check 9 | ❌ Caught |
+| **B16** | Implausible 95% Dry Conversion Yield | Conservation Hook: pinned `biochar_max_dry_yield_bps` ($\le 40\%$) | Check 9 | ❌ Caught |
+| **B17** | Simulator Stub in Strict Hardware Mode | Core Engine: rejected when `--require-hardware-attestation` is passed | Check 2 | ❌ Caught |
 
 ---
 
-## Cross-Language Conformance Test Vectors
+## 8. Cross-Language Golden Conformance Vectors
 
-To support Milestone 3 (Rust rewrite of the verifier engine), this repository freezes immutable golden test vectors:
-- **Biochar Pyrolysis:** [`04_experiments/golden_test_vector_biochar/`](04_experiments/golden_test_vector_biochar/)
-- **Energy Submetering:** [`04_experiments/golden_test_vector/`](04_experiments/golden_test_vector/)
+To guarantee bit-for-bit verification parity for the standalone Rust verifier (Milestone 3), the repository freezes immutable golden test vectors for both reference drivers:
+* **Golden Vector 1 (`energy_submetering`):** [`04_experiments/golden_test_vector/`](04_experiments/golden_test_vector/)
+* **Golden Vector 2 (`biochar_pyrolysis`):** [`04_experiments/golden_test_vector_biochar/`](04_experiments/golden_test_vector_biochar/)
 
-Verify the energy submetering golden vector:
 ```bash
+# Verify Golden Vector 1 (Energy Submetering)
 python3 src/verifier/verify_bundle.py \
   04_experiments/golden_test_vector/claim_bundle/ \
   --company-key 04_experiments/golden_test_vector/company_root_public_key.pem \
   --json
-```
 
-Verify the biochar pyrolysis golden vector:
-```bash
+# Verify Golden Vector 2 (Biochar Pyrolysis)
 python3 src/verifier/verify_bundle.py \
   04_experiments/golden_test_vector_biochar/biochar_bundle/ \
   --company-key 04_experiments/golden_test_vector_biochar/producer_root_public_key.pem \
@@ -515,33 +305,30 @@ python3 src/verifier/verify_bundle.py \
 
 ---
 
-## Repository Map
+## 9. Repository Map & Roadmap
 
 ```text
 ├── 00_project/             # Roadmap, decision registers, NLnet application draft & trackers
 ├── 01_literature/          # Academic literature matrix, search protocols, and gap analysis
-├── 02_protocol/            # Evidence Bundle Specification v1.2 & threat boundaries
-├── 03_system/              # System architecture docs and formal threat model
-├── 04_experiments/         # Golden test vectors (Biochar & Energy) and experiment registry
-├── biochar_bundle/         # Verified Biochar dMRV evidence bundle (EU CRCF / Puro)
-├── claim_bundle/           # Verified Energy Submetering evidence bundle (CSRD)
+├── 02_protocol/            # Universal Claim Evidence Bundle Specification v1.2
+├── 03_system/              # System architecture docs and formal physical-to-digital threat model
+├── 04_experiments/         # Frozen golden conformance vectors and P1–P6 security re-audit suite
+├── claim_bundle/           # Generated Reference Driver 1 bundle (energy_submetering)
+├── biochar_bundle/         # Generated Reference Driver 2 bundle (biochar_pyrolysis)
 ├── src/
-│   ├── device_simulator/   # Edge simulators: mock_biochar_edge.py & mock_edge.py
-│   ├── pipeline/           # Lineage generators: biochar_claim_generator.py & claim_generator.py
-│   ├── verifier/           # Modular 10-check zero-trust verifier CLI & trusted registry
-│   └── attacks/            # Biochar (17/17), outsider (11/11), and insider (5/5) test suites (33 total)
+│   ├── verifier/           # Universal 10-check zero-trust verifier CLI & pinned registry
+│   ├── device_simulator/   # Edge simulators for Reference Drivers 1 & 2
+│   ├── pipeline/           # Deterministic W3C PROV-O packagers for Reference Drivers 1 & 2
+│   └── attacks/            # Automated adversarial suites: O1–O11, I1–I5, and B1–B17 (33 total)
 ├── LICENSE                 # Apache 2.0 Open-Source License
 └── README.md               # Project documentation
 ```
 
----
-
-## Roadmap & Milestones (NLnet Restack)
-
-- [x] **Milestone 1:** Specification Freeze, Canonical RFC 8785 Schemas & Adversarial Threat Model (v1.2 Complete in local prototype)
-- [ ] **Milestone 2:** Hardware Root-of-Trust & Isolated Edge Ingestion Gateway (ATECC608 I2C driver & isolated RS-485 reader daemon)
-- [ ] **Milestone 3:** Zero-Dependency Offline Verifier Engine & Cross-Language Determinism (Rust verifier binary & air-gapped CLI)
-- [ ] **Milestone 4:** Reference Hardware Testbench, Adversarial Benchmark & Public Release (Physical bench, open-hardware wiring guides & Apache 2.0 release)
+### NLnet Restack Roadmap
+- [x] **Milestone 1:** Universal Evidence Bundle Specification, RFC 8785 Schemas, Pluggable Profile Dispatcher & 33-Vector Adversarial Benchmark (Complete in Python/OpenSSL prototype)
+- [ ] **Milestone 2:** Hardware Root-of-Trust (`ATECC608B` I2C / `TPM 2.0` driver) & 2.5 kV Galvanically Isolated RS-485 Ingestion Daemon
+- [ ] **Milestone 3:** Standalone Zero-Dependency Rust Verifier Binary & Cross-Language Golden Vector Conformance
+- [ ] **Milestone 4:** Physical Hardware Reference Testbench, Open-Hardware Cabinet Wiring Guides & Apache 2.0 Release
 
 ---
 

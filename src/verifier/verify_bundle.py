@@ -1,20 +1,25 @@
 """
-Independent Evidence Bundle Verifier CLI (v1.1)
+Universal Zero-Trust Verifiable Telemetry Engine & Offline Verifier CLI (v1.2)
 
-Executes all 10 Zero-Trust Verifier Checks defined in 02_protocol/evidence_bundle_spec.md:
-  1. Validate manifest integrity, bundle seal, path traversal guard, and unmanifested files.
-  2. Validate device certificate, hardware attestation, and device_id re-derivation.
-  3. Validate observation signatures and temporal validity against certificate lifetime.
-  4. Validate cryptographic hash-chain continuity (prev_hash) to prevent truncation/splicing.
-  5. Validate sequence ordering, duplicates, and dual-register consistency (cumulative vs interval).
-  6. Validate claim period boundaries (first/last sequence, expected count, terminal hash).
-  7. Validate transformation input/output hashes and W3C PROV-O lineage graph.
-  8. Validate emission factor against the Auditor's Pinned Reference Registry.
-  9. Independently recompute integer Watt-hour energy and Scope 2 carbon quantification.
-  10. Reconcile recomputed metrics against declared claim and emit structured audit report.
+Executes the 10-Check Fail-Closed Verification State Machine defined in 02_protocol/evidence_bundle_spec.md.
+The engine separates universal cryptographic provenance from pluggable domain physical invariants:
 
-Operates completely offline with zero network connectivity or cloud dependencies.
-Fail-closed architecture: Any malformed input produces [AUDIT FAILED], never an unhandled crash.
+  [7 Universal Core Cryptographic & Structural Engine Checks]
+  Check 1  : Manifest Integrity, Root Bundle Seal, Path Traversal Guard & Private-Key Exclusion.
+  Check 2  : Device Certificate Chain, Public-Key Binding, Silicon Attestation & Legal Metrology Window.
+  Check 3  : Per-Observation NIST P-256 ECDSA Signatures & Dynamic Sensor Calibration Lifetime.
+  Check 4  : Monotonic Sequential Hash-Chain Continuity (prev_hash) Against Truncation/Splicing.
+  Check 6  : Claim Period Boundary Enforcement & Offline Claim Ledger Cross-Bundle Deduplication.
+  Check 7  : Transformation Recipe Hashing & W3C PROV-O Directed Acyclic Lineage Graph Validation.
+  Check 10 : Zero-Tolerance Numeric Reconciliation Against Declared Claim & Formal Audit Verdict.
+
+  [3 Pluggable Domain Profile Invariant Hooks (Registered in SUPPORTED_PROFILE_DRIVERS)]
+  Check 5  : Physical Process Continuity Hook (e.g., dual-register delta match or minimum thermal bounds).
+  Check 8  : Authoritative Reference Registry Pinning Hook (e.g., grid emission factors or ISO 17025 lab assays).
+  Check 9  : Physical Conservation Law & Deterministic Integer Recomputation Hook (mass/energy balance).
+
+Operates 100% offline with zero third-party pip dependencies (Python 3 stdlib + POSIX OpenSSL CLI).
+Fail-closed architecture: Any malformed input produces [AUDIT VERDICT: FAILED], never an unhandled crash.
 """
 
 import sys
@@ -1607,8 +1612,28 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
     return all_passed
 
 
-# UNIVERSAL PROFILE DISPATCHER
+# UNIVERSAL PROFILE DISPATCHER & PLUGIN REGISTRY
 # =====================================================================
+
+SUPPORTED_PROFILE_DRIVERS = {
+    "energy_submetering": {
+        "description": "Continuous Linear Flow Metrology (EU MID Class B / CSRD)",
+        "metrology_standard": "EU Directive 2014/32/EU (MID Class B)",
+        "check5_hook": "Monotonic Sequence & Dual-Register Consistency (Delta cum_wh == interval_wh)",
+        "check8_hook": "Pinned National Grid Emission Factor Registry (ISPRA / EEA)",
+        "check9_hook": "Deterministic Integer Watt-Hour Summation & Scope 2 Recomputation",
+        "handler": verify_energy_bundle,
+    },
+    "biochar_pyrolysis": {
+        "description": "Non-Linear Thermodynamic Mass & Thermal Transformation (EU NAWI Class III / CRCF)",
+        "metrology_standard": "EU Directive 2014/31/EU (NAWI Class III)",
+        "check5_hook": "Continuous Thermal Permanence Bounds (T_min >= 500°C)",
+        "check8_hook": "Pinned Accredited ISO 17025 Lab Assay & Biomass Manifest Registry",
+        "check9_hook": "First-Law Mass Conservation (M_dry <= M_in, <= 40% Yield) & CRCF Stoichiometry",
+        "handler": verify_biochar_bundle,
+    },
+}
+
 
 def verify_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=None,
                   verbose=False, json_mode=False, json_out_path=None,
@@ -1650,7 +1675,7 @@ def verify_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=None,
         else:
             detected_profile = manifest_profile
 
-    if detected_profile not in ("biochar_pyrolysis", "energy_submetering"):
+    if detected_profile not in SUPPORTED_PROFILE_DRIVERS:
         err = f"Error: Unknown or unsupported profile: {detected_profile}"
         if json_mode:
             print(json.dumps({"verdict": "FAILED", "errors": [err]}, indent=2))
@@ -1662,29 +1687,26 @@ def verify_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=None,
         base_script_dir = os.path.dirname(os.path.abspath(__file__))
         trusted_registry_path = os.path.join(base_script_dir, "trusted_references.json")
 
-    if detected_profile == "biochar_pyrolysis":
-        return verify_biochar_bundle(bundle_dir, company_pubkey_path, trusted_registry_path,
-                                     verbose=verbose, json_mode=json_mode, json_out_path=json_out_path,
-                                     expected_count=expected_count, prev_terminal_hash=prev_terminal_hash,
-                                     revoked=revoked, claim_ledger=claim_ledger, record_ledger=record_ledger,
-                                     require_hardware_attestation=require_hardware_attestation)
-    else:
-        return verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path,
-                                    verbose=verbose, json_mode=json_mode, json_out_path=json_out_path,
-                                    expected_count=expected_count, prev_terminal_hash=prev_terminal_hash,
-                                    revoked=revoked, claim_ledger=claim_ledger, record_ledger=record_ledger,
-                                    require_hardware_attestation=require_hardware_attestation)
+    driver_handler = SUPPORTED_PROFILE_DRIVERS[detected_profile]["handler"]
+    return driver_handler(
+        bundle_dir, company_pubkey_path, trusted_registry_path,
+        verbose=verbose, json_mode=json_mode, json_out_path=json_out_path,
+        expected_count=expected_count, prev_terminal_hash=prev_terminal_hash,
+        revoked=revoked, claim_ledger=claim_ledger, record_ledger=record_ledger,
+        require_hardware_attestation=require_hardware_attestation
+    )
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Modular Zero-Trust Evidence Bundle Verifier (v1.2)")
-    parser.add_argument("bundle", nargs="?", default="claim_bundle", help="Path to claim_bundle directory")
+    parser = argparse.ArgumentParser(description="Universal Zero-Trust Verifiable Telemetry Engine & Offline Verifier CLI (v1.2)")
+    parser.add_argument("bundle", nargs="?", default="claim_bundle", help="Path to evidence bundle directory")
     parser.add_argument("--company-key", default="company_root_public_key.pem", help="Path to Root Public Key / Trust Anchor")
     parser.add_argument("--trusted-registry", default=None, help="Path to auditor's pinned trusted_references.json")
     parser.add_argument("--expected-count", type=int, default=None, help="Auditor-mandated observation count")
     parser.add_argument("--prev-terminal-hash", default=None, help="Terminal hash from previous reporting period")
     parser.add_argument("--revoked", default=None, help="Comma-separated device IDs or path to revocation file")
-    parser.add_argument("--profile", default=None, help="Force specific profile: biochar_pyrolysis or energy_submetering")
+    parser.add_argument("--profile", default=None, help="Force specific profile driver (e.g., energy_submetering, biochar_pyrolysis)")
+    parser.add_argument("--list-profiles", action="store_true", help="List registered domain profile drivers and their invariant hooks")
     parser.add_argument("--claim-ledger", default=None, help="Path to auditor claim ledger against double counting")
     parser.add_argument("--record-ledger", action="store_true", help="Record verified claim to ledger")
     parser.add_argument("--require-hardware-attestation", action="store_true", help="Reject simulator stubs; require verified hardware attestation")
@@ -1692,6 +1714,27 @@ def main():
     parser.add_argument("--json", action="store_true", help="Output machine-readable JSON audit report")
     parser.add_argument("--json-out", default=None, help="Save machine-readable JSON report to file")
     args = parser.parse_args()
+
+    if args.list_profiles:
+        if args.json:
+            out = {
+                k: {kk: vv for kk, vv in v.items() if kk != "handler"}
+                for k, v in SUPPORTED_PROFILE_DRIVERS.items()
+            }
+            print(json.dumps(out, indent=2))
+        else:
+            print("=" * 70)
+            print(" Universal Verifiable Telemetry Engine — Registered Profile Drivers")
+            print("=" * 70)
+            for pid, meta in SUPPORTED_PROFILE_DRIVERS.items():
+                print(f"[*] Profile ID  : {pid}")
+                print(f"    Description : {meta['description']}")
+                print(f"    Metrology   : {meta['metrology_standard']}")
+                print(f"    Check 5 Hook: {meta['check5_hook']}")
+                print(f"    Check 8 Hook: {meta['check8_hook']}")
+                print(f"    Check 9 Hook: {meta['check9_hook']}")
+                print("-" * 70)
+        sys.exit(0)
 
     success = verify_bundle(args.bundle, args.company_key, trusted_registry_path=args.trusted_registry,
                             verbose=args.verbose, json_mode=args.json, json_out_path=args.json_out,
