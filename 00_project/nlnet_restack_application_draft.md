@@ -14,9 +14,9 @@
 
 ### Field 2: Proposal Title
 **Draft Title:**
-Verifiable Telemetry: Open-Source Hardware Root-of-Trust and Local-First Provenance for Industrial Climate Data
+Verifiable Telemetry: Open-Source Hardware Root-of-Trust and Local-First Provenance for Industrial IoT (EU MID & NAWI / CSRD & CRCF)
 
-*(Length: 111 characters)*
+*(Length: 133 characters / 150)*
 
 ---
 
@@ -32,11 +32,9 @@ https://github.com/aloysiusjebanson-lab/trustworthy-telemetry
 *(Limit: Max 1,000 characters)*
 
 **Draft Text:**
-Today, industrial IoT lacks an open, trustworthy internet architecture: sensor data is funneled into proprietary cloud "dark stacks", unauthenticated SQL databases, and manual spreadsheets where telemetry can be silently altered or falsified before audit. Nowhere is this trust gap more severe than high-durability carbon removals (EU CRCF Regulation 2024/1735, Delegated Regulation 2026/285, Puro.earth) and industrial ESG (CSRD), where high-value carbon claims (€110–€180/t) currently rest on unverified CSVs.
+Today, industrial IoT lacks an open, trustworthy internet architecture: operational sensor data is funneled into proprietary cloud "dark stacks", unauthenticated databases, and manual spreadsheets where telemetry can be silently altered before audit. This project delivers an open-source, local-first telemetry engine that restacks the physical-to-internet boundary. A hardened edge gateway captures raw physical instrument data (galvanically isolated RS-485 Modbus) directly at the wire, signing readings in hardware secure elements (ATECC608/TPM2) into unbroken hash-chains. Self-contained W3C PROV-O evidence bundles allow independent auditors to verify physical origin, process invariants, and regulatory metrics 100% offline with zero cloud lock-in. The engine is proven on two statutory profiles: (1) industrial energy submetering (EU MID / CSRD) and (2) durable carbon removals (EU NAWI / CRCF, €100–€200/t).
 
-This project delivers an open-source, local-first cryptographic telemetry engine. A hardened edge gateway captures raw physical sensor data (RS-485 Modbus thermocouples, legal scales) directly at the wire, signing readings in hardware secure elements (ATECC608) into unbroken hash-chains. Self-contained W3C PROV-O bundles allow independent auditors to verify physical origin, process permanence, and net removals 100% offline with zero cloud vendor lock-in.
-
-*(Current character count: 971 / 1,000 characters)*
+*(Current character count: 915 / 1,000 characters)*
 
 ---
 
@@ -107,7 +105,7 @@ In summary, we do not claim to solve all physical fraud with mathematics alone. 
 *(Limit: Max 4,000 characters)*
 
 **Draft Text:**
-Designing an open, deterministic hardware-to-audit verification engine for high-durability carbon removal involves several non-trivial technical challenges:
+Designing an open, deterministic hardware-to-audit verification engine for industrial IoT telemetry and regulatory verification involves several non-trivial technical challenges:
 
 1. Sensor Tapping, Galvanic Isolation & ATEX Safe-Zone Architecture:
 Pyrolysis plants are harsh industrial environments with severe electrical noise (EMI from high-voltage igniters, variable frequency drives, and heavy auger motors) and hazardous flammable syngas (CO, H2, CH4) creating ATEX Zone 2 boundaries near kiln seals. Tapping this telemetry reliably requires: (1) mounting the gateway exclusively inside the unclassified main electrical control panel in the safe zone; (2) using 2.5 kV galvanically isolated RS-485 transceivers to prevent ground loops and MCU lockups; and (3) directly tapping physical sensor instruments (dedicated Modbus RTU Type-K thermocouple modules and digital weighing indicators) rather than querying the plant PLC, which would leave the system vulnerable to software register overrides by plant operators.
@@ -127,7 +125,7 @@ Accredited Validation and Verification Bodies (VVBs like DNV, CSQA, Verifavia) f
 6. Adversarial Attack Hardening & Invariant Enforcement:
 To prevent sophisticated insider tampering by plant operators holding root keys, the verifier enforces strict physical and mathematical invariants: per-batch mass conservation, a 40% pyrolysis dry-yield ceiling, ISO 17025 lab-to-batch range bindings, dynamic calibration expiration checks against observation timestamps, and a claim ledger that rejects double-counting re-issues. Our automated testbench proves fail-closed rejection across 33 distinct adversarial fraud vectors.
 
-*(Current character count: 3,966 / 4,000 characters)*
+*(Current character count: 3,988 / 4,000 characters)*
 
 ---
 
@@ -135,7 +133,7 @@ To prevent sophisticated insider tampering by plant operators holding root keys,
 *(Limit: Max 2,000 characters)*
 
 **Draft Text:**
-This project is engineered from inception as an open-source commons to establish a vendor-neutral standard for carbon removal and industrial data provenance:
+This project is engineered from inception as an open-source commons to establish a vendor-neutral standard for industrial IoT data provenance and regulatory verification:
 
 1. Standards Alignment & Interoperability:
 Our evidence bundle and serialization schemas align with emerging European and international carbon standards: the EU Carbon Removal Certification Framework (CRCF, Regulation (EU) 2024/1735 and Delegated Regulation (EU) 2026/285), European Biochar Certificate (EBC), Puro.earth Standard, ISO 14064-2/3 (GHG project quantification and verification), and the EU Cyber Resilience Act (hardware root-of-trust mandates).
@@ -150,7 +148,7 @@ Our primary target beneficiaries include:
 3. Dissemination & Long-Term Sustainability:
 All specifications, schemas, code, and test fixtures will be published under the permissive Apache 2.0 license on GitHub. We will publish reproducible reference documentation, quickstart tutorials, and open hardware wiring guides. Long-term maintenance will be sustained through engagement with the European biochar community, open-source industrial edge ecosystems (e.g., EdgeX Foundry), and follow-up European digital commons calls.
 
-*(Current character count: 1,820 / 2,000 characters)*
+*(Current character count: 1,833 / 2,000 characters)*
 
 ---
 
