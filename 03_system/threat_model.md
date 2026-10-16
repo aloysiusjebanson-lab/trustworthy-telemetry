@@ -21,7 +21,7 @@ We formalize three distinct threat actors with asymmetric capabilities and econo
   * Burn cheap fossil coal dust, tire crumbs, or toxic CCA-treated demolition lumber instead of certified sustainable forestry residues.
   * Double-count certified biomass deliveries beyond delivered quotas.
   * Silently drop failed or undercooked production batches.
-* **Limitations:** Does NOT hold the secure element manufacturer's private CA keys and cannot forge hardware attestation certificates; cannot alter physical mass-balance conservation laws ($M_{\text{dry}} \le M_{\text{feedstock}}$); cannot modify independent laboratory assays pinned in the auditor's immutable registry (`trusted_references.json`).
+* **Limitations:** Does NOT hold the secure element manufacturer's private CA keys and cannot forge hardware attestation certificates once Milestone 2 manufacturer CA chain verification is enforced (in Milestone 1/prototype, attestation is an honest `SIMULATED_STUB` descriptor flagged with an audit warning or rejected when auditors enforce `--require-hardware-attestation`); cannot alter physical mass-balance conservation laws ($M_{\text{dry}} \le M_{\text{feedstock}}$); cannot modify independent laboratory assays pinned in the auditor's immutable registry (`trusted_references.json`).
 
 ### Adversary C: Dishonest Reporting Enterprise (Corporate Scope 2 Greenwashing)
 * **Capabilities:** Holds the Company Root Private Key, operates the submetering ingestion pipeline, can modify internal energy databases, and can seal claim bundles.
@@ -30,11 +30,11 @@ We formalize three distinct threat actors with asymmetric capabilities and econo
 
 ---
 
-## 2. Comprehensive Adversarial Attack Benchmark (32/32 Caught)
+## 2. Comprehensive Adversarial Attack Benchmark (33/33 Caught)
 
-The architecture is validated against 32 automated adversarial attack vectors across three dedicated benchmark suites:
+The architecture is validated against 33 automated adversarial attack vectors across three dedicated benchmark suites:
 
-### 2.1 Biochar Pyrolysis dMRV Adversary Matrix (`src/attacks/biochar_attacks.py` — 16/16 Caught)
+### 2.1 Biochar Pyrolysis dMRV Adversary Matrix (`src/attacks/biochar_attacks.py` — 17/17 Caught)
 
 | ID | Attack Vector | Adversary Action | Cryptographic & Physical Defense | Verifier Check | Verdict |
 |:---:|---|---|---|:---:|:---:|
@@ -54,6 +54,7 @@ The architecture is validated against 32 automated adversarial attack vectors ac
 | **B14** | **Double Counting Claim Replay** | Re-seals identical observation batch stream under new `claim_id` | Check 6 auditor claim ledger terminal hash & batch ID deduplication | Check 6 | ❌ CAUGHT |
 | **B15** | **Per-Batch Mass Violation** | Single batch dry output exceeds its own feedstock input mass | Check 9 per-batch mass conservation invariant enforcement | Check 9 | ❌ CAUGHT |
 | **B16** | **Excessive 95% Dry Yield** | Claims 95% dry yield (pyrolysis theoretical max is ~35-40%) | Check 9 methodology parameter max dry yield bound ($\le 40\%$) | Check 9 | ❌ CAUGHT |
+| **B17** | **Simulator Attestation Rejection** | Generates software keys with simulated attestation descriptor | Strict Hardware Attestation enforcement (`--require-hardware-attestation`) | Check 2 | ❌ CAUGHT |
 
 ### 2.2 Outsider Adversary Matrix (`src/attacks/outsider_attacks.py` — 11/11 Caught)
 

@@ -142,7 +142,8 @@ def find_forbidden_key_files(bundle_dir):
 def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_path,
                           verbose=False, json_mode=False, json_out_path=None,
                           expected_count=None, prev_terminal_hash=None, revoked=None,
-                          claim_ledger=None, record_ledger=False):
+                          claim_ledger=None, record_ledger=False,
+                          require_hardware_attestation=False):
     if not json_mode:
         print("=" * 70)
         print(" Independent Offline Verifier — Zero-Trust Biochar dMRV Audit (v1.2)")
@@ -355,6 +356,9 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
                 expected_key_hash = hashlib.sha256(actual_pub_pem.encode('utf-8')).hexdigest()
                 if attest_doc.get("device_public_key_sha256") != expected_key_hash:
                     audit_errors.append("Hardware attestation key hash mismatch with device public key")
+                    dev_ok = False
+                if require_hardware_attestation and attestation_mode == "SIMULATED_STUB":
+                    audit_errors.append("Strict hardware attestation required: simulator stub rejected.")
                     dev_ok = False
             else:
                 audit_errors.append("Missing hardware_attestation.json")
@@ -881,7 +885,8 @@ def verify_biochar_bundle(bundle_dir, producer_pubkey_path, trusted_registry_pat
 def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=None,
                          verbose=False, json_mode=False, json_out_path=None,
                          expected_count=None, prev_terminal_hash=None, revoked=None,
-                         claim_ledger=None, record_ledger=False):
+                         claim_ledger=None, record_ledger=False,
+                         require_hardware_attestation=False):
     if not json_mode:
         print("=" * 70)
         print(" Independent Offline Verifier — Zero-Trust Claim Audit (v1.1)")
@@ -1067,12 +1072,18 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
                                         att_data = safe_json_load(af)
                                     attestation_mode = att_data.get("attestation_mode", "UNKNOWN")
                                     att_status_ok = att_data.get("attestation_status") == "verified_hardware_secure_element"
+                                    att_ok = True
                                     if not att_status_ok:
                                         audit_errors.append("Hardware attestation status not verified")
+                                        att_ok = False
                                     expected_key_hash = hashlib.sha256(actual_pub_pem.encode('utf-8')).hexdigest()
                                     if att_data.get("device_public_key_sha256") != expected_key_hash:
                                         audit_errors.append("Hardware attestation key hash mismatch with device public key")
-                                    elif att_status_ok and cert_data.get("algorithm") == "ECDSA_P256_SHA256" and metrology_ok:
+                                        att_ok = False
+                                    if require_hardware_attestation and attestation_mode == "SIMULATED_STUB":
+                                        audit_errors.append("Strict hardware attestation required: simulator stub rejected.")
+                                        att_ok = False
+                                    if att_ok and cert_data.get("algorithm") == "ECDSA_P256_SHA256" and metrology_ok:
                                         cert_ok = True
                                 else:
                                     audit_errors.append("Missing hardware_attestation.json")
@@ -1602,7 +1613,8 @@ def verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=
 def verify_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=None,
                   verbose=False, json_mode=False, json_out_path=None,
                   expected_count=None, prev_terminal_hash=None, revoked=None, profile=None,
-                  claim_ledger=None, record_ledger=False):
+                  claim_ledger=None, record_ledger=False,
+                  require_hardware_attestation=False):
     # Enforce trust anchor presence (C6.2: no silent fallback)
     if not company_pubkey_path or not os.path.exists(company_pubkey_path):
         err = f"Error: Trust anchor key file not found: {company_pubkey_path}. Specify via --company-key."
@@ -1654,12 +1666,14 @@ def verify_bundle(bundle_dir, company_pubkey_path, trusted_registry_path=None,
         return verify_biochar_bundle(bundle_dir, company_pubkey_path, trusted_registry_path,
                                      verbose=verbose, json_mode=json_mode, json_out_path=json_out_path,
                                      expected_count=expected_count, prev_terminal_hash=prev_terminal_hash,
-                                     revoked=revoked, claim_ledger=claim_ledger, record_ledger=record_ledger)
+                                     revoked=revoked, claim_ledger=claim_ledger, record_ledger=record_ledger,
+                                     require_hardware_attestation=require_hardware_attestation)
     else:
         return verify_energy_bundle(bundle_dir, company_pubkey_path, trusted_registry_path,
                                     verbose=verbose, json_mode=json_mode, json_out_path=json_out_path,
                                     expected_count=expected_count, prev_terminal_hash=prev_terminal_hash,
-                                    revoked=revoked, claim_ledger=claim_ledger, record_ledger=record_ledger)
+                                    revoked=revoked, claim_ledger=claim_ledger, record_ledger=record_ledger,
+                                    require_hardware_attestation=require_hardware_attestation)
 
 
 def main():
@@ -1673,6 +1687,7 @@ def main():
     parser.add_argument("--profile", default=None, help="Force specific profile: biochar_pyrolysis or energy_submetering")
     parser.add_argument("--claim-ledger", default=None, help="Path to auditor claim ledger against double counting")
     parser.add_argument("--record-ledger", action="store_true", help="Record verified claim to ledger")
+    parser.add_argument("--require-hardware-attestation", action="store_true", help="Reject simulator stubs; require verified hardware attestation")
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose diagnostics (display error breakdown)")
     parser.add_argument("--json", action="store_true", help="Output machine-readable JSON audit report")
     parser.add_argument("--json-out", default=None, help="Save machine-readable JSON report to file")
@@ -1682,7 +1697,8 @@ def main():
                             verbose=args.verbose, json_mode=args.json, json_out_path=args.json_out,
                             expected_count=args.expected_count, prev_terminal_hash=args.prev_terminal_hash,
                             revoked=args.revoked, profile=args.profile,
-                            claim_ledger=args.claim_ledger, record_ledger=args.record_ledger)
+                            claim_ledger=args.claim_ledger, record_ledger=args.record_ledger,
+                            require_hardware_attestation=args.require_hardware_attestation)
     sys.exit(0 if success else 1)
 
 

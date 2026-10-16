@@ -3,7 +3,7 @@
 Biochar Pyrolysis Adversarial Benchmark Suite (v1.3)
 Standards: EU CRCF Delegated Regulation 2026/285 | Puro.earth | EBC (European Biochar Certificate)
 
-Executes 16 programmatic adversarial fraud tests asserting that the Zero-Trust Offline
+Executes 17 programmatic adversarial fraud tests asserting that the Zero-Trust Offline
 Verifier detects and rejects real-world biochar carbon removal fraud:
   1. Attack B1: Water Spraying Fraud (Wet Mass Inflation / Mass Balance Violation)
   2. Attack B2: Thermal Permanence Undercooking (Reactor T_min < 500°C)
@@ -21,6 +21,7 @@ Verifier detects and rejects real-world biochar carbon removal fraud:
   14. Attack B14: Double-Counting Re-issue Under New Claim ID
   15. Attack B15: Per-Batch Mass Balance Violation (Dry Output > Own Feedstock)
   16. Attack B16: Excessive 95% Dry Yield (Pyrolysis Physical Bound Violation)
+  17. Attack B17: Software Simulator Key Rejection under Strict Hardware Attestation
 """
 
 import os
@@ -357,6 +358,15 @@ def run_biochar_tests():
         build_biochar_claim_bundle(d16, producer_priv_key_path=producer_priv)
         c16, det16 = verify_and_check(d16, producer_pub, "check9_independent_recomputation", registry=registry)
         attacks.append(("B16: Excessive 95% Dry Yield (Pyrolysis Max 40%)", c16, det16))
+
+        # ------------------------------------------------------------------
+        # B17: Software Simulator Key under Strict Hardware Attestation (X1)
+        # ------------------------------------------------------------------
+        d17 = os.path.join(workdir, "bundle_biochar_b17")
+        clone_bundle(clean_bundle, d17)
+        c17, det17 = verify_and_check(d17, producer_pub, "check2_device_cert_and_attestation",
+                                      extra_args=["--require-hardware-attestation"], registry=registry)
+        attacks.append(("B17: Simulator Stub Rejection (Strict Attestation)", c17, det17))
 
     finally:
         shutil.rmtree(workdir, ignore_errors=True)

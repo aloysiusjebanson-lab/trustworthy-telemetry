@@ -426,10 +426,10 @@ python3 src/verifier/verify_bundle.py claim_bundle/ --company-key company_root_p
 
 ## Adversarial Benchmark & Attack Suites
 
-The pipeline includes comprehensive adversarial test suites programmatically asserting fail-closed rejection of **32 distinct fraud vectors**:
+The pipeline includes comprehensive adversarial test suites programmatically asserting fail-closed rejection of **33 distinct fraud vectors**:
 
 ```bash
-# Run biochar pyrolysis dMRV adversary suite (16 attack vectors)
+# Run biochar pyrolysis dMRV adversary suite (17 attack vectors)
 python3 src/attacks/biochar_attacks.py
 
 # Run outsider adversary suite (11 attack vectors)
@@ -439,7 +439,7 @@ python3 src/attacks/outsider_attacks.py
 python3 src/attacks/insider_fraud_suite.py
 ```
 
-### Biochar dMRV Adversary Matrix (16/16 Caught)
+### Biochar dMRV Adversary Matrix (17/17 Caught)
 | ID | Attack Vector | Verifier Defense | Verdict |
 |---|---|---|:---:|
 | **B1** | Water Spraying / Moisture Inflation Fraud | Physical mass-balance conservation invariant ($M_{\text{dry}} \le M_{\text{feedstock}}$) | ❌ Caught |
@@ -458,6 +458,7 @@ python3 src/attacks/insider_fraud_suite.py
 | **B14** | Double-Counting Re-issue Under New Claim ID | Check 6 auditor claim ledger double-counting check | ❌ Caught |
 | **B15** | Per-Batch Mass Balance Violation (Dry > Feedstock) | Check 9 per-batch mass conservation enforcement | ❌ Caught |
 | **B16** | Excessive 95% Dry Yield (Pyrolysis Bound) | Check 9 methodology parameter max dry yield bound ($\le 40\%$) | ❌ Caught |
+| **B17** | Software Simulator Key Rejection | Strict Hardware Attestation enforcement (`--require-hardware-attestation`) | ❌ Caught |
 
 ### Outsider Adversary Matrix (11/11 Caught)
 | ID | Attack Vector | Verifier Defense | Verdict |
@@ -515,7 +516,7 @@ python3 src/verifier/verify_bundle.py \
 │   ├── device_simulator/   # Edge simulators: mock_biochar_edge.py & mock_edge.py
 │   ├── pipeline/           # Lineage generators: biochar_claim_generator.py & claim_generator.py
 │   ├── verifier/           # Modular 10-check zero-trust verifier CLI & trusted registry
-│   └── attacks/            # Biochar (16/16), outsider (11/11), and insider (5/5) test suites (32 total)
+│   └── attacks/            # Biochar (17/17), outsider (11/11), and insider (5/5) test suites (33 total)
 ├── LICENSE                 # Apache 2.0 Open-Source License
 └── README.md               # Project documentation
 ```
