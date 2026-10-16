@@ -1,43 +1,44 @@
-# System Architecture & Implementation (v1.1)
+# System Architecture & Implementation (v1.2)
 
-This directory documents the technical architecture, cryptographic data flow, and components of the **Verifiable Telemetry** pipeline.
+This directory documents the technical architecture, cryptographic data flow, pluggable profile dispatcher, and repository components of the **Universal Verifiable Telemetry Engine**.
 
 ---
 
-## 1. System Architecture & Data Flow
+## 1. Universal Engine Architecture & Data Flow
+
+The system separates the **Core Cryptographic Verification Engine** (7 domain-agnostic checks) from **Pluggable Domain Profile Drivers** (3 invariant hooks dispatched via `SUPPORTED_PROFILE_DRIVERS`).
 
 ```mermaid
 flowchart TD
-    subgraph EDGE["1. Edge Gateway & Physical Ingestion"]
-        METER["Physical Energy Meter\n(Carlo Gavazzi EM24, MID Class B)"]
-        MODBUS["RS-485 Modbus RTU\n(Registers: cumulative_wh, interval_wh)"]
-        SIM["Hardened Gateway Ingestion\n(mock_edge.py)"]
-        ATECC["Secure Element (ATECC608)\n(Hardware Private Key Slot 0)"]
-        FACTORY["Microchip Factory CA\n(hardware_attestation.json)"]
-        CHAIN["Sequential Hash-Chain\n(prev_hash link)"]
-        OBS_OUT["Signed Telemetry Records\n(observations.ndjson)"]
+    subgraph EDGE["1. Physical Sensor Bus & Hardened Edge Boundary"]
+        SENSORS["Legal-for-Trade Field Instruments\n- Driver 1: EU MID 2014/32/EU Submeter\n- Driver 2: EU NAWI 2014/31/EU Scale & Thermocouple"]
+        MODBUS["2.5 kV Isolated RS-485 Tap\n(Direct Modbus RTU Read)"]
+        GATEWAY["Hardened Edge Gateway\n(mock_edge.py / biochar_edge.py)"]
+        ATECC["Secure Element Silicon\n(ATECC608B / TPM 2.0 Key Slot)"]
+        ATTEST["Silicon Attestation Descriptor\n(hardware_attestation.json)"]
+        CHAIN["Sequential Hash-Chain Engine\n(prev_hash = SHA-256 of prior record)"]
+        OBS_OUT["Signed Telemetry Stream\n(observations/observations.ndjson)"]
 
-        METER --> MODBUS
-        MODBUS --> SIM
-        FACTORY -.->|Silicon cert chain| SIM
-        SIM --> ATECC
+        SENSORS --> MODBUS
+        MODBUS --> GATEWAY
+        ATTEST -.->|Public key SHA-256 binding| GATEWAY
+        GATEWAY --> ATECC
         ATECC -->|ECDSA P-256 Sign| CHAIN
         CHAIN --> OBS_OUT
     end
 
-    subgraph PIPELINE["2. Evidence Pipeline & Claim Packaging"]
-        INGEST["Pipeline Aggregator\n(claim_generator.py)"]
-        ROOT_KEY["Company Root Key\n(company_root_private_key.pem)"]
-        DEV_CERT["Signed Device Certificate\n(device_certificate.json + MID Class B)"]
-        RECIPES["Lineage Transformations\n(energy_aggregation.json\ncarbon_calculation.json)"]
-        PROV["W3C PROV-O Graph\n(provenance.json)"]
-        CLAIM["Claim Declaration\n(claim.json)"]
-        SEAL["Bundle Seal\n(Root Signature over Manifest)"]
-        MANIFEST["manifest.json\n(Canonical SHA-256 file catalog)"]
-        BUNDLE["claim_bundle/"]
+    subgraph PIPELINE["2. Evidence Packaging & Provenance Pipeline"]
+        INGEST["Deterministic Claim Packager\n(claim_generator.py / biochar_claim_generator.py)"]
+        ROOT_KEY["Producer Root Key\n(NIST P-256 Private Key)"]
+        DEV_CERT["Signed Device Certificate\n(device_certificate.json + Metrology Window)"]
+        RECIPES["Integer Transformation Recipes\n(transformations/*.json)"]
+        PROV["W3C PROV-O Lineage Graph\n(provenance/provenance.json)"]
+        CLAIM["Declared Claim Metrics\n(claim.json)"]
+        MANIFEST["Canonical File Catalog\n(manifest.json + bundle_seal)"]
+        BUNDLE["Self-Contained Evidence Container\n(claim_bundle/)"]
 
         OBS_OUT --> INGEST
-        ROOT_KEY -->|Issues & signs| DEV_CERT
+        ROOT_KEY -->|Signs cert & metrology| DEV_CERT
         INGEST --> RECIPES
         INGEST --> PROV
         INGEST --> CLAIM
@@ -47,35 +48,41 @@ flowchart TD
         CLAIM --> BUNDLE
         OBS_OUT --> BUNDLE
         BUNDLE --> MANIFEST
-        ROOT_KEY -->|Signs manifest| SEAL
-        SEAL --> MANIFEST
+        ROOT_KEY -->|Signs RFC 8785 manifest| MANIFEST
     end
 
-    subgraph AUDIT["3. Independent Offline Verifier"]
-        CLI["Verifier CLI Engine\n(verify_bundle.py / OpenSSL)"]
-        TRUST_ANCHOR["Company Root Public Key\n(company_root_public_key.pem)"]
-        REGISTRY["Auditor Pinned Registry\n(trusted_references.json / ISPRA digests)"]
-        
-        subgraph CHECKS["10 Fail-Closed Verification Checks"]
-            C1["Check 1: Manifest Integrity & Bundle Seal"]
-            C2["Check 2: Device Cert, Attestation & MID Pedigree"]
-            C3["Check 3: Observation Signatures & Timestamp Bounds"]
-            C4["Check 4: Cryptographic Hash-Chain Continuity"]
-            C5["Check 5: Sequence Monotonicity & Dual Registers"]
-            C6["Check 6: Claim Period Boundary Bounds Enforcement"]
-            C7["Check 7: W3C PROV-O Lineage & Recipe Digests"]
-            C8["Check 8: Pinned Registry Emission Factor Match"]
-            C9["Check 9: Independent Integer Wh Recomputation"]
-            C10["Check 10: Zero-Tolerance Numeric Reconciliation"]
+    subgraph AUDIT["3. Independent Offline Verifier Engine (verify_bundle.py)"]
+        CLI["Universal Verifier State Machine\n(Python 3 Stdlib + OpenSSL CLI)"]
+        TRUST_ANCHOR["Producer Root Public Key"]
+        REGISTRY["Auditor Pinned Authority Registry\n(trusted_references.json)"]
+        LEDGER["Cross-Claim Deduplication Ledger\n(--claim-ledger)"]
+
+        subgraph CORE_CHECKS["7 Universal Core Engine Checks"]
+            C1["Check 1: Manifest Seal, Path Jail & Key Hygiene"]
+            C2["Check 2: Device Cert, Key Binding, Silicon & Metrology"]
+            C3["Check 3: Observation ECDSA Signatures & Calibration Window"]
+            C4["Check 4: Genesis & Sequential prev_hash Continuity"]
+            C6["Check 6: Claim Boundaries & Cross-Claim Replay Ledger"]
+            C7["Check 7: W3C PROV-O Entity & Recipe Digest Lineage"]
+            C10["Check 10: Zero-Tolerance Integer Claim Reconciliation"]
         end
 
-        VERDICT{"Formal Audit Verdict:\nPASSED or FAILED"}
+        subgraph PROFILE_HOOKS["3 Pluggable Domain Profile Hooks (SUPPORTED_PROFILE_DRIVERS)"]
+            C5["Check 5 Hook: Process Continuity Invariant"]
+            C8["Check 8 Hook: Pinned Authority Reference Verification"]
+            C9["Check 9 Hook: Physical Conservation & Recomputation"]
+        end
+
+        VERDICT{"Formal Audit Verdict:\nPASSED or FAILED (Fail-Closed)"}
 
         BUNDLE --> CLI
-        TRUST_ANCHOR -->|Verification key| CLI
-        REGISTRY -->|Authoritative factor digests| CLI
-        CLI --> CHECKS
-        CHECKS --> VERDICT
+        TRUST_ANCHOR --> CLI
+        REGISTRY --> CLI
+        LEDGER --> CLI
+        CLI --> CORE_CHECKS
+        CLI --> PROFILE_HOOKS
+        CORE_CHECKS --> VERDICT
+        PROFILE_HOOKS --> VERDICT
     end
 ```
 
@@ -83,49 +90,52 @@ flowchart TD
 
 ## 2. Directory & Component Mapping
 
-| Directory / File | Role | Description |
+| Directory / File | Architectural Layer | Description |
 |---|---|---|
-| [`src/device_simulator/mock_edge.py`](../src/device_simulator/mock_edge.py) | Edge Simulator | Simulates physical Modbus RTU registers, Microchip ATECC608 silicon attestation, sequential hash-chain calculation (`prev_hash`), and NIST P-256 observation signing. |
-| [`src/pipeline/claim_generator.py`](../src/pipeline/claim_generator.py) | Claim Pipeline | Ingests observation streams, applies deterministic integer Wh summation and GHG Scope 2 calculations, builds W3C PROV-O provenance, generates `manifest.json`, and cryptographically seals the bundle. |
-| [`src/verifier/verify_bundle.py`](../src/verifier/verify_bundle.py) | Offline Verifier | Independent zero-trust verification CLI executing 10 fail-closed checks using native OpenSSL. Zero pip dependencies. |
-| [`src/verifier/trusted_references.json`](../src/verifier/trusted_references.json) | Pinned Registry | Pinned authoritative emission factor database hashes (ISPRA 2026, EEA) maintained independently by the auditor. |
-| [`src/attacks/outsider_attacks.py`](../src/attacks/outsider_attacks.py) | Outsider Benchmark | Programmatic test harness verifying rejection of 10 outsider adversarial attack vectors. |
-| [`src/attacks/insider_fraud_suite.py`](../src/attacks/insider_fraud_suite.py) | Insider Benchmark | Programmatic test harness verifying rejection of 5 insider fraud vectors (greenwashing, dual-register shaving, truncation, software keys, broken chains). |
-| [`04_experiments/golden_test_vector/`](../04_experiments/golden_test_vector/) | Conformance Vector | Canonical frozen bundle, root key, and expected audit JSON for Milestone 3 cross-language (Rust) conformance testing. |
-| [`03_system/threat_model.md`](threat_model.md) | Formal Threat Model | NLnet Task 3.4 threat model and security boundary document. |
+| [`src/verifier/verify_bundle.py`](../src/verifier/verify_bundle.py) | **Core Verifier Engine** | Universal zero-trust verification CLI executing the 7 core cryptographic/structural checks and dispatching the 3 pluggable domain hooks via `SUPPORTED_PROFILE_DRIVERS`. Supports `--list-profiles`, `--claim-ledger`, and `--require-hardware-attestation`. Zero pip dependencies. |
+| [`src/verifier/trusted_references.json`](../src/verifier/trusted_references.json) | **Core Authority Registry** | Out-of-band auditor-pinned SHA-256 digests for authoritative reference datasets (ISPRA/EEA grid factors, ISO 17025 lab certificates, certified delivery manifests) and pinned `methodology_parameters`. |
+| [`src/device_simulator/mock_edge.py`](../src/device_simulator/mock_edge.py) | **Reference Driver 1 (`energy_submetering`)** | Simulates EU MID 2014/32/EU Class B Modbus RTU dual registers (`cumulative_wh`, `interval_wh`), hardware attestation descriptor, sequential `prev_hash` chaining, and P-256 signing. |
+| [`src/pipeline/claim_generator.py`](../src/pipeline/claim_generator.py) | **Reference Driver 1 (`energy_submetering`)** | Packages signed energy observations, integer Wh summation, Scope 2 GHG recipes, W3C PROV-O lineage, and root-sealed `manifest.json`. |
+| [`src/device_simulator/biochar_edge.py`](../src/device_simulator/biochar_edge.py) | **Reference Driver 2 (`biochar_pyrolysis`)** | Simulates EU NAWI 2014/31/EU Class III weighing indicators and Type-K pyrolysis thermocouple buses, silicon attestation binding, and batch `prev_hash` signing. |
+| [`src/pipeline/biochar_claim_generator.py`](../src/pipeline/biochar_claim_generator.py) | **Reference Driver 2 (`biochar_pyrolysis`)** | Packages multi-sensor pyrolysis batches, ISO 17025 lab assays, feedstock manifests, 6-part mass-balance conservation recipes, and W3C PROV-O lineage. |
+| [`src/attacks/outsider_attacks.py`](../src/attacks/outsider_attacks.py) | **Core Engine Benchmark (`O1–O11`)** | Automated adversarial test suite verifying fail-closed rejection of 11 outsider tampering, spoofing, path traversal, and key-hygiene vectors. |
+| [`src/attacks/insider_fraud_suite.py`](../src/attacks/insider_fraud_suite.py) | **Insider Benchmark (`I1–I5`)** | Automated test suite verifying rejection of 5 operator fraud vectors (reference factor greenwashing, dual-register shaving, period truncation, simulator key injection, stream splicing). |
+| [`src/attacks/biochar_attacks.py`](../src/attacks/biochar_attacks.py) | **Domain Driver Stress Suite (`B1–B17`)** | Automated test suite verifying rejection of 17 multi-sensor physical & metrological fraud vectors (moisture inflation, thermal undercooking, unpinned lab reports, expired calibration, cross-claim replay, yield-cap violations). |
+| [`04_experiments/security_reaudit/poc_exploits.py`](../04_experiments/security_reaudit/poc_exploits.py) | **Security Regression Harness (`P1–P6`)** | Automated regression harness validating all 6 security re-audit hardening fixes (`P1–P6`). |
+| [`04_experiments/golden_test_vector/`](../04_experiments/golden_test_vector/) | **Golden Vector 1 (`energy_submetering`)** | Frozen reference bundle, public key, and expected JSON verdict for cross-language (Rust) conformance testing of linear cumulative flows. |
+| [`04_experiments/golden_test_vector_biochar/`](../04_experiments/golden_test_vector_biochar/) | **Golden Vector 2 (`biochar_pyrolysis`)** | Frozen reference bundle, public key, and expected JSON verdict for cross-language conformance testing of non-linear mass transformations. |
+| [`03_system/threat_model.md`](threat_model.md) | **Formal Threat Model** | Formal threat taxonomy, adversary capabilities, physical-to-digital security boundaries, and 33-vector benchmark mapping. |
 
 ---
 
-## 3. Cryptographic Lifecycle Sequence
+## 3. Universal Cryptographic Lifecycle Sequence
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant M as Physical Meter (MID Class B)
-    participant E as Edge Gateway (ATECC608)
-    participant C as Company Pipeline
-    participant A as Auditor Verifier (Zero-Trust)
-    participant R as Pinned Authority Registry
+    participant S as Legal-for-Trade Sensors (MID / NAWI)
+    participant E as Edge Gateway (ATECC608 / TPM 2.0)
+    participant P as Packaging Pipeline
+    participant V as Offline Verifier Engine (verify_bundle.py)
+    participant R as Pinned Authority Registry & Claim Ledger
 
-    Note over M,E: Tier 1: Hardware Telemetry Ingestion
-    M->>E: Stream register readings (cumulative_wh, interval_wh)
-    E->>E: Calculate prev_hash chain: H_n = SHA256(H_{n-1} || reading_n)
-    E->>E: Sign observation envelope with Silicon Private Key (NIST P-256)
-    E-->>C: Stream signed observations.ndjson
+    Note over S,E: Tier 1: Hardware Edge Boundary
+    S->>E: Read physical registers over 2.5 kV isolated RS-485
+    E->>E: Chain record: prev_hash = SHA-256(canonical_json(record_{n-1}))
+    E->>E: Sign canonical integer payload in Secure Element (ECDSA P-256)
+    E-->>P: Emit observations/observations.ndjson
 
-    Note over C: Tier 2: Transformation & Sealing
-    C->>C: Execute energy aggregation & Scope 2 GHG calculation
-    C->>C: Generate W3C PROV-O graph & claim.json with period boundaries
-    C->>C: Hash all bundle files into canonical manifest.json
-    C->>C: Sign manifest.json with Company Root Key (Bundle Seal)
+    Note over P: Tier 2: Deterministic Packaging & Sealing
+    P->>P: Generate integer transformation recipes & W3C PROV-O graph
+    P->>P: Bind sequence bounds & terminal_hash into claim.json
+    P->>P: Compute SHA-256 catalog in manifest.json & sign with Producer Root Key
 
-    Note over A,R: Tier 3: Independent Offline Audit
-    C-->>A: Submit sealed claim_bundle/ & Company Root Public Key
-    A->>A: Check 1: Verify Company Root Signature over manifest.json (Bundle Seal)
-    A->>A: Check 2: Verify Microchip Factory Attestation & MID Metrology Pedigree
-    A->>A: Check 3-5: Verify Observation Signatures, Hash-Chain & Dual Registers
-    A->>A: Check 6: Enforce period boundaries (record_count, terminal_hash)
-    A->>R: Check 8: Match bundled emission factor against Pinned ISPRA/EEA Registry
-    A->>A: Check 9-10: Independently sum integer Wh & reconcile carbon claim
-    A-->>A: Emit Audit Verdict: PASSED (Zero-Knowledge, Air-Gapped)
+    Note over V,R: Tier 3: Independent Zero-Trust Verification
+    P-->>V: Deliver self-contained claim_bundle/
+    V->>V: Core Checks 1-4: Verify Manifest Seal, Key Hygiene, Silicon Attestation, Metrology & Hash-Chain
+    V->>V: Profile Hook Check 5: Verify Process Continuity Invariant (via SUPPORTED_PROFILE_DRIVERS)
+    V->>R: Core Check 6 & 7: Verify Claim Boundaries, Cross-Claim Replay Ledger & PROV-O Lineage
+    V->>R: Profile Hook Check 8: Verify External Reference SHA-256 Digests against Pinned Registry
+    V->>V: Profile Hook Check 9 & Core Check 10: Enforce Physical Conservation & Zero-Tolerance Reconciliation
+    V-->>V: Emit Deterministic Audit Verdict: PASSED or FAILED (Air-Gapped)
 ```
