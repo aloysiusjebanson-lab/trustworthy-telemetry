@@ -26,7 +26,7 @@ We formalize three distinct threat actors with asymmetric capabilities and econo
 ### Adversary C: Dishonest Reporting Enterprise (Corporate Scope 2 Greenwashing)
 * **Capabilities:** Holds the Company Root Private Key, operates the submetering ingestion pipeline, can modify internal energy databases, and can seal claim bundles.
 * **Motivations:** Under-report Scope 2 greenhouse gas emissions for CSRD compliance (Directive 2022/2464/EU), avoid carbon border taxes (CBAM), achieve green building certifications (LEED/WELL) fraudulently, or shave industrial peak-demand curves.
-* **Limitations:** Cannot forge MID Class B legal metrology certificates; cannot break dual-register mathematical agreement ($\Delta \text{cumulative\_wh} == \text{interval\_wh}$) without physical meter tampering; cannot alter national grid emission factor registries pinned by auditors.
+* **Limitations:** Cannot forge MID Class B legal metrology certificates; cannot break dual-register mathematical agreement (`Δ cumulative_wh == interval_wh`) without physical meter tampering; cannot alter national grid emission factor registries pinned by auditors.
 
 ---
 
@@ -41,7 +41,7 @@ The architecture is validated against 33 automated adversarial attack vectors ac
 | **B1** | **Water Spraying Fraud** | Drenches biochar with water; fakes lab moisture to claim high dry yield | Physical Mass Conservation Invariant: $M_{\text{dry}} \le M_{\text{feedstock}}$ violates thermodynamics | Check 9 | ❌ CAUGHT |
 | **B2** | **Thermal Undercooking** | Pyrolyzes kiln at $T_{\min} < 500^\circ\text{C}$ to save electrical/gas fuel | Statutory EU CRCF Permanence Invariant: continuous $T_{\min} \ge 500^\circ\text{C}$ enforced | Check 5 | ❌ CAUGHT |
 | **B3** | **Counterfeit Lab Report** | Replaces accredited lab report with fabricated high $C_{\text{org}}$ assay | Auditor Pinned Reference Registry: unpinned lab assay SHA-256 digest rejected | Check 8 | ❌ CAUGHT |
-| **B4** | **Feedstock Cap Exhaustion** | Ingests batches consuming biomass beyond certified delivered quota | Cumulative Feedstock Quota Tracking: $\sum M_{\text{feedstock}} \le M_{\text{delivered\_quota}}$ | Check 9 | ❌ CAUGHT |
+| **B4** | **Feedstock Cap Exhaustion** | Ingests batches consuming biomass beyond certified delivered quota | Cumulative Feedstock Quota Tracking: $\sum M_{\text{feedstock, in}} \le M_{\text{delivered}}$ | Check 9 | ❌ CAUGHT |
 | **B5** | **Dropped Batch / Omission** | Silently deletes cold or low-yield production batches | Sequential Hash-Chain Continuity: breaks $H_n = \text{SHA-256}(H_{n-1} \mathbin{\Vert} \text{batch}_n)$ | Check 4 | ❌ CAUGHT |
 | **B6** | **Non-Certified Scale** | Replaces certified weighing indicator with uncalibrated commercial scale | EU Directive 2014/31/EU NAWI Class III legal metrology binding | Check 2 | ❌ CAUGHT |
 | **B7** | **Software Key Forgery** | Simulates edge gateway using uncertified software OpenSSL key | Hardware attestation descriptor verification | Check 2 | ❌ CAUGHT |
@@ -77,7 +77,7 @@ The architecture is validated against 33 automated adversarial attack vectors ac
 | ID | Attack Vector | Adversary Action | Cryptographic & Mathematical Defense | Verifier Check | Verdict |
 |:---:|---|---|---|:---:|:---:|
 | **I1** | **Emission Greenwashing** | Swaps grid emission factor to 0.05 and reseals bundle with valid root key | Auditor Pinned Reference Registry (`trusted_references.json`) | Check 8 | ❌ CAUGHT |
-| **I2** | **Dual-Register Shaving** | Lowers interval Wh while running meter totalizer advances | Dual-Register Delta Invariant: $\Delta \text{cumulative\_wh} == \text{interval\_wh}$ | Check 5 | ❌ CAUGHT |
+| **I2** | **Dual-Register Shaving** | Lowers interval Wh while running meter totalizer advances | Dual-Register Delta Invariant: `Δ cumulative_wh == interval_wh` | Check 5 | ❌ CAUGHT |
 | **I3** | **Period Truncation** | Drops peak production shifts at shift ends and reseals | Claim Boundary Bounds: declared period timestamps & sequence bounds | Check 6 | ❌ CAUGHT |
 | **I4** | **Software Simulator Key** | Generates software keys to fabricate clean data without hardware | Silicon Hardware Attestation: requires valid attestation descriptor | Check 2 | ❌ CAUGHT |
 | **I5** | **Telemetry Splicing** | Stitches non-consecutive days together across maintenance shut-downs | Sequential Hash-Chain Continuity: `prev_hash` break across splice | Check 4 | ❌ CAUGHT |
