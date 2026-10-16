@@ -2,8 +2,8 @@
 
 **Created:** September 27, 2026  
 **Deadline:** November 3, 2026 — 12:00 CET (noon)  
-**Days Remaining:** 25 (as of Oct 9, 2026)  
-**Target Submission:** November 1, 2026 (23 days remaining / 2-day buffer)
+**Days Remaining:** 18 (as of Oct 16, 2026)  
+**Target Submission:** November 1, 2026 (16 days remaining / 2-day buffer)
 
 ---
 
@@ -62,7 +62,7 @@
 |---|------|----------|-------|--------|-----|-------|
 | 3.1 | Build basic `verify_bundle.py` CLI (signature check) | 🟡 | Together | ✅ | Sept 29 | Zero-dependency OpenSSL offline verifier built & working |
 | 3.2 | End-to-end demo: mock_edge signs → verifier validates | 🟡 | Together | ✅ | Sept 29 | Verified local pipeline (sign -> audit pass) |
-| 3.3 | Add adversarial test (corrupt 1 byte → verification fails) | 🟢 | Together | ✅ | Sept 30 | 7/7 attack vectors benchmarked & rejected by verifier |
+| 3.3 | Add adversarial test (corrupt 1 byte → verification fails) | 🟢 | Together | ✅ | Oct 16 | 33/33 attack vectors benchmarked & rejected by verifier (17 biochar, 11 outsider, 5 insider) |
 | 3.4 | Add threat model doc to repo | 🟢 | Together | ✅ | Oct 4 | Formal threat model & security boundaries written in 03_system/threat_model.md |
 | 3.5 | Record terminal demo (asciinema or screenshot) | 🟢 | User | ⬜ | Oct 19 | Visual proof for repo README |
 
@@ -149,4 +149,5 @@ Sep 27                    Oct 3      Oct 12     Oct 19     Oct 27  Nov 1  Nov 3
 | Oct 5 | **NLnet Restack Reframing & System Architecture Realignment:** (1) Reframed NLnet proposal Title (Field 2) and Summary (Field 4) to lead with Open Internet Stack / Local-First Provenance / eliminating proprietary cloud dark stacks, grounding it in EU CRCF biochar and CSRD energy proving grounds; (2) Updated `README.md` with 4-zone physical-to-digital flowchart, fraud defense engineering (moisture trap, cold kilns, $^{14}\text{C}$ radiocarbon, confused deputy, downstream leakage), and 4-milestone roadmap; (3) Pushed commits to private GitHub repository (`aloysiusjebanson-lab/trustworthy-telemetry`). |
 | Oct 9 | **Cutting-Edge Standardization & Technology Survey:** (1) Discovered and aligned with active IETF Internet-Draft `draft-elkhatabi-verifiable-telemetry-ledgers` (v-11) on verifiable edge telemetry; (2) Benchmarked against competitor Mālama Labs (ATECC608 biochar dMRV), identifying our zero-token / local-first / air-gapped advantage over public Cardano blockchain tokenization; (3) Surveyed IETF EAT (RFC 9711), TCG DICE for MCUs, RFC 3161 TSA temporal anchoring, and post-quantum hybrid archiving (NIST FIPS 204/205). Tracker days remaining updated to 25 days. |
 | Oct 11 | **Security Re-Audit & Hardening Sprint (Phases A–E Complete):** (1) Fixed all 6 confirmed vulnerabilities (P1–P6) from the Oct 10 re-audit (`00_project/security_fix_tracker.md`), verified via portable acceptance test `poc_exploits.py` exiting 0 with 0 vulnerable PoCs; (2) Key hygiene: moved device private keys out of bundles to `src/device_simulator/keys/`, added zero-tolerance check rejecting any private key in bundles; (3) Identity & metrology: bound device public key to cert and re-derived `device_id`, enforced dynamic calibration checks vs batch timestamps for NAWI scale and MID energy meters, bound attestation hash and labeled `SIMULATED_STUB`; (4) Physics & anti-replay: enforced per-batch mass conservation, maximum 40% dry yield bound (`methodology_parameters`), lab batch range binding, and auditor claim ledger against double counting; (5) Test harness: built strict `src/attacks/harness.py` and self-contained `src/attacks/fixtures.py`, expanded test suites to 32/32 vectors (biochar 16/16 with B11–B16, outsider 11/11 with O11, insider 5/5) with baseline assertions; (6) Refroze both golden vectors in `04_experiments/` and updated documentation honesty pass. |
+| Oct 16 | **Independent Verification & Strict Attestation Enforcement (`--require-hardware-attestation`):** (1) Conducted independent red-team verification of Phases A–E (`poc_exploits.py` 0/6 vulnerable, fresh-clone green); (2) Qualified Adversary B hardware attestation limitations in `03_system/threat_model.md` to eliminate any contradiction between prototype `SIMULATED_STUB` mode and Milestone 2 manufacturer CA chain verification; (3) Implemented `--require-hardware-attestation` CLI flag in `src/verifier/verify_bundle.py` across both biochar and energy profiles so auditors can fail-closed on simulator stubs; (4) Added Attack Vector B17 to `src/attacks/biochar_attacks.py` (bringing total adversarial suite to **33/33 caught**: 17/17 biochar, 11/11 outsider, 5/5 insider). |
 
