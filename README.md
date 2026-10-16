@@ -27,7 +27,7 @@ To demonstrate that the protocol is universal rather than single-industry, Verif
 1. **Profile 1: Industrial Energy Submetering (`energy_submetering`):**
    * **Physical Paradigm:** Continuous linear electrical metrology.
    * **Regulatory Mandate:** EU Corporate Sustainability Reporting Directive (**CSRD Directive 2022/2464**) and Energy Performance of Buildings Directive (**EPBD**).
-   * **Invariants Enforced:** EU Directive 2014/32/EU (MID Class B) meter metrology, dual-register integer consistency ($\Delta \text{cumulative\_wh} == \text{interval\_wh}$), and pinned national grid emission factors (e.g., ISPRA).
+   * **Invariants Enforced:** EU Directive 2014/32/EU (MID Class B) meter metrology, dual-register integer consistency (`Δ cumulative_wh == interval_wh`), and pinned national grid emission factors (e.g., ISPRA).
 2. **Profile 2: High-Durability Carbon Removals (`biochar_pyrolysis`):**
    * **Physical Paradigm:** Non-linear thermodynamic mass and thermal transformation.
    * **Regulatory Mandate:** EU Carbon Removal Certification Framework (**EU CRCF Delegated Regulation 2026/285**), **Puro.earth CORCs**, and the **European Biochar Certificate (EBC)**.
@@ -51,7 +51,7 @@ flowchart TD
             TC["Type-K Thermocouple Array\n(Hearth Temperature Transmitters)"]
         end
 
-        subgraph CABINET["Safe-Zone Electrical Control Cabinet (<55°C)"]
+        subgraph CABINET["Safe-Zone Electrical Control Cabinet (under 55°C)"]
             GATEWAY["Hardened Edge Gateway\n(2.5 kV Galvanically Isolated RS-485)"]
             ATECC["Microchip ATECC608 Secure Element\n(Private Key Locked in Silicon Slot 0)"]
             HASH_CHAIN["Sequential Hash-Chain Engine\n(prev_hash = SHA-256 of prior observation)"]
@@ -72,8 +72,8 @@ flowchart TD
         
         subgraph TRANSFORMS["Domain Transformations & Statutory Invariants"]
             ENERGY_CALC["Energy Reconciliation\n(Delta cum_wh == int_wh + Grid Factor)"]
-            MASS_BALANCE["Mass & Energy Conservation\n(Net Dry Mass <= Feedstock Input)"]
-            PERMANENCE["Process Invariant Enforcement\n(Thermal Permanence T >= 500°C)"]
+            MASS_BALANCE["Mass & Energy Conservation\n(Net Dry Mass ≤ Feedstock Input)"]
+            PERMANENCE["Process Invariant Enforcement\n(Thermal Permanence T ≥ 500°C)"]
         end
 
         PROV["W3C PROV-O Lineage Graph\n(provenance.json Entity & Activity Digests)"]
@@ -137,14 +137,14 @@ sequenceDiagram
 
     Note over S,G: Layer 1: Hardware Root-of-Trust at the Wire (Safe Zone)
     S->>G: Raw serial / Modbus registers (energy Wh, scale mass g, hearth temp °C)
-    G->>G: Verify local process invariants (e.g., T_min >= 500°C or cum_wh delta)
+    G->>G: Verify local process invariants (e.g., T_min ≥ 500°C or cum_wh delta)
     G->>G: Compute sequential hash-chain link: H_n = SHA-256(H_{n-1} || payload_n)
     G->>G: Sign observation envelope inside secure element (NIST P-256 ECDSA)
     G-->>P: Stream signed observations.ndjson with unbroken hash-chain
 
     Note over P: Layer 2: Transformation, Lineage & Cryptographic Bundle Sealing
     P->>P: Ingest observations & bind authoritative reference digests (lab assays / grid factors)
-    P->>P: Enforce domain conservation laws (mass conservation M_dry <= M_in, energy consistency)
+    P->>P: Enforce domain conservation laws (mass conservation M_dry ≤ M_in, energy consistency)
     P->>P: Compute statutory regulatory metrics (EU CSRD Scope 2 / EU CRCF net removals)
     P->>P: Generate W3C PROV-O graph (provenance.json) and formal claim (claim.json)
     P->>P: Compute canonical manifest.json hash inventory across all bundle files
@@ -155,7 +155,7 @@ sequenceDiagram
     V->>V: Check 1: Verify Producer Root Signature over manifest.json (Bundle Seal)
     V->>V: Check 2: Verify ATECC608 Silicon RoT & MID / NAWI Legal Metrology Certificates
     V->>V: Check 3-4: Verify ECDSA Observation Signatures & Hash-Chain Continuity
-    V->>V: Check 5: Verify Process & Thermal Permanence Invariants across all records
+    V->>V: Check 5: Verify Process & Thermal Permanence Invariants across all records (T ≥ 500°C)
     V->>R: Check 8: Match Lab Assays, Biomass Manifests, or Grid Factors vs Auditor Registry
     V->>V: Check 9: Recompute statutory metrics from raw telemetry; assert physical conservation
     V->>V: Check 10: Match recomputed results against declared claim.json (Zero-Tolerance)
@@ -215,9 +215,10 @@ flowchart LR
 ### 1. Register Shaving & Moisture / Mass Fraud
 * **The Attack:** In energy submetering, an operator manipulates interval telemetry registers to report lower peak-demand electricity usage while cumulative registers count up. In biomass/biochar, water quenching is physically required for fire safety as char exits at $>500^\circ\text{C}$; a dishonest operator hoses down the output pile with excess water to artificially inflate scale weight ($M_{\text{wet}}$).
 * **The Restack Defense:**
-  1. *Dual-Register Integer Consistency (Energy):* Verifier Check 9 asserts that cumulative meter register deltas strictly match interval sums: $\Delta \text{cumulative\_wh} == \sum \text{interval\_wh}$ (**Attack I2 Caught**).
+  1. *Dual-Register Integer Consistency (Energy):* Verifier Check 9 asserts that cumulative meter register deltas strictly match interval sums: `Δ cumulative_wh == Σ interval_wh` (**Attack I2 Caught**).
   2. *Strict Net Dry Mass Quantification (Biochar):* Carbon credits are never awarded on scale weight. Credits are calculated strictly on dry mass:
-     $$M_{\text{dry}} = \frac{M_{\text{wet}} \times (10,000 - \text{moisture\_bps})}{10,000}$$
+     $$M_{\text{dry}} = M_{\text{wet}} \times (1 - \text{moisture})$$
+     Programmatically calculated via integer basis points: `M_dry = M_wet * (10000 - moisture_bps) // 10000`.
   3. *The Inescapable Mass Conservation Trap:* Excess water spraying elevates laboratory moisture assays (e.g., 35.00%), automatically discounting wet mass. If an operator attempts to forge the lab assay to declare artificially low moisture, the resulting calculated dry mass mathematically violates the first law of thermodynamics:
      $$M_{\text{dry}} > M_{\text{feedstock}}$$
      Verifier Check 9 enforces aggregate mass conservation and a statutory **40.00% maximum dry yield bound** pinned in `trusted_references.json` (**Attacks B1, B15 & B16 Caught**).
@@ -255,7 +256,7 @@ flowchart LR
 
 | Fraud Vector | Can Software / Math Alone Solve It? | In-Scope Restack Cryptographic Defense | Complementary Physical / Metrological Control |
 |---|:---:|---|---|
-| **Register Shaving (Energy)** | Yes | **Check 9 Invariant:** Cumulative delta matches interval sum ($\Delta \text{cum} == \sum \text{int}$) | EU MID Class B calibrated meter with factory lead seals |
+| **Register Shaving (Energy)** | Yes | **Check 9 Invariant:** Cumulative delta matches interval sum (`Δ cum == Σ int`) | EU MID Class B calibrated meter with factory lead seals |
 | **Water Spraying (Biochar)** | No (cannot stop physical water hoses) | **Net Dry Mass Formula** + **Check 9 Mass Conservation Trap** ($M_{\text{dry}} \le M_{\text{feedstock}}$) | Composite sampling under ISO 17025 laboratory protocol |
 | **Cold Process / Reactor Undercooking** | Yes | **Check 5 Invariant:** Continuous $T_{\min} \ge 500^\circ\text{C}$ signed at source; fails closed | Direct Modbus RS-485 tap inside safe-zone cabinet + Sensor Fusion |
 | **Fossil Fuel / Adulterated Feedstock** | No (scales measure mass, not chemistry) | **Check 8 Pinned Reference Match:** Lab assay digest pinned in auditor registry | ISO 17025 $^{14}\text{C}$ radiocarbon dating & ICP-MS metal screening |
@@ -283,7 +284,7 @@ flowchart TD
     end
 
     subgraph P2["Profile 2: High-Durability Carbon Removals (EU NAWI / CRCF)"]
-        BIOCHAR["Thermodynamic Mass & Thermal Transformation\n- EU NAWI Class III weighing scales\n- Continuous Type-K thermocouple permanence (T >= 500°C)\n- Chemical mass-balance invariants & ISO 17025 assays"]
+        BIOCHAR["Thermodynamic Mass & Thermal Transformation\n- EU NAWI Class III weighing scales\n- Continuous Type-K thermocouple permanence (T ≥ 500°C)\n- Chemical mass-balance invariants & ISO 17025 assays"]
     end
 
     subgraph CORE["Universal Verifiable Telemetry Protocol"]
@@ -299,7 +300,7 @@ flowchart TD
 1. **Profile 1: Industrial Energy Submetering (`energy_submetering`):**
    * **The Physical Flow:** Continuous, linear flow of electrons through active meters.
    * **The Statutory Driver:** Mandatory corporate reporting under the EU Corporate Sustainability Reporting Directive (**CSRD Directive 2022/2464**) and Energy Performance of Buildings Directive (**EPBD**).
-   * **Validation Goal:** Proves that high-frequency interval readings match immutable cumulative registers ($\Delta \text{cumulative\_wh} == \text{interval\_wh}$) with pinned national grid emission factors.
+   * **Validation Goal:** Proves that high-frequency interval readings match immutable cumulative registers (`Δ cumulative_wh == interval_wh`) with pinned national grid emission factors.
 
 2. **Profile 2: High-Durability Carbon Removals (`biochar_pyrolysis`):**
    * **The Physical Flow:** Non-linear chemical and thermal transformation of solid biomass into stable porous carbon.
@@ -312,7 +313,7 @@ flowchart TD
 
 1. **Zero External Dependencies:** Built entirely with Python 3 standard library and native POSIX OpenSSL CLI (`openssl dgst -sha256`). Runs in air-gapped auditor enclaves without `pip install`.
 2. **Sequential Cryptographic Hash-Chains:** Each reading embeds `prev_hash`, preventing head/tail truncation, record reordering, and telemetry splicing.
-3. **Statutory Thermodynamic & Process Invariants:** Enforces physical mass conservation ($M_{\text{dry}} \le M_{\text{feedstock}}$), thermal permanence ($T_{\min} \ge 500^\circ\text{C}$), and dual-register energy deltas ($\Delta \text{cumulative\_wh} == \text{interval\_wh}$).
+3. **Statutory Thermodynamic & Process Invariants:** Enforces physical mass conservation ($M_{\text{dry}} \le M_{\text{feedstock}}$), thermal permanence ($T_{\min} \ge 500^\circ\text{C}$), and dual-register energy deltas (`Δ cumulative_wh == interval_wh`).
 4. **Metrological Pedigree Binding:** Cryptographically binds sensor model, NAWI 2014/31/EU / MID 2014/32/EU accuracy class, and factory calibration validity into the signed device certificate.
 5. **Auditor-Pinned Reference Data:** Independent verification against pinned registry digests (`trusted_references.json`), neutralizing insider emission factor or laboratory assay manipulation.
 6. **Deterministic Canonicalization (RFC 8785 in M1):** Current prototype enforces strict integer accounting (grams, degrees Celsius, basis points, Watt-hours) with deterministic key-sorted JSON; RFC 8785 (JCS) canonicalization will be fully implemented in Milestone 1.
@@ -483,7 +484,7 @@ python3 src/attacks/insider_fraud_suite.py
 | ID | Attack Vector | Verifier Defense | Verdict |
 |---|---|---|:---:|
 | **I1** | Emission Factor Greenwashing + Reseal | Auditor pinned reference registry check | ❌ Caught |
-| **I2** | Dual-Register Interval Shaving | Meter register delta consistency check ($\Delta \text{cum} == \text{int}$) | ❌ Caught |
+| **I2** | Dual-Register Interval Shaving | Meter register delta consistency check (`Δ cum == int`) | ❌ Caught |
 | **I3** | Period Head/Tail Truncation | Claim declared period boundaries vs audit mandate | ❌ Caught |
 | **I4** | Unattested Software Simulator Key | Silicon hardware attestation descriptor validation | ❌ Caught |
 | **I5** | Telemetry Splicing & Re-chaining | Sequential cryptographic hash continuity | ❌ Caught |

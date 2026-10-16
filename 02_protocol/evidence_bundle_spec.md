@@ -129,7 +129,7 @@ Each row represents an indivisible production run signed at origin:
 }
 ```
 
-* **Sequential Hash-Chain:** `prev_hash[i]` = $\text{SHA-256}(\text{canonical\_json}(\text{record}[i-1]))$.
+* **Sequential Hash-Chain:** `prev_hash[i] = SHA-256(canonical_json(record[i-1]))`.
 * **Genesis Hash:** Record 1 uses 64 zeros.
 
 ### 3.4 Physical & Mathematical Invariant Rules
@@ -137,17 +137,18 @@ Each row represents an indivisible production run signed at origin:
 The verifier enforces strict physical laws:
 
 1. **Moisture Discount (Net Dry Mass):**
-   $$M_{\text{dry\_g}} = \frac{M_{\text{wet\_g}} \times (10,000 - \text{moisture\_bps})}{10,000}$$
+   $$M_{\text{dry}} = M_{\text{wet}} \times (1 - \text{moisture})$$
+   Programmatically calculated via integer basis points: `M_dry_g = M_wet_g * (10000 - moisture_bps) // 10000`.
 2. **Mass-Balance Upper Bound:** The dry mass of biochar produced can never exceed the dry biomass feedstock fed into the reactor:
-   $$M_{\text{biochar, dry\_g}} \le M_{\text{feedstock\_g}}$$
+   $$M_{\text{biochar, dry}} \le M_{\text{feedstock}}$$
 3. **Feedstock Delivery Cap:** The cumulative feedstock used across verified batches cannot exceed the total verified biomass volume on the delivery manifest:
-   $$\sum M_{\text{feedstock\_input\_g}} \le M_{\text{feedstock\_delivered\_total\_g}}$$
+   $$\sum M_{\text{feedstock, in}} \le M_{\text{feedstock, delivered}}$$
 4. **Thermal Permanence Lower Bound:** Continuous minimum temperature across every batch must meet or exceed the statutory permanence threshold:
    $$T_{\min} \ge 500^\circ\text{C}$$
 5. **Net Carbon Dioxide Removal ($\text{CO}_2$):**
-   $$\text{Gross CO}_2\text{ (g)} = M_{\text{dry\_g}} \times \frac{C_{\text{org\_bps}}}{10,000} \times \frac{F_{\text{perm\_bps}}}{10,000} \times \frac{44}{12}$$
-   $$\text{Net CO}_2\text{ (g)} = \text{Gross CO}_2 - E_{\text{process\_g}}$$
-   $$\text{Net Tonnes CO}_2 = \frac{\text{Net CO}_2\text{ (g)}}{1,000,000}$$
+   $$\text{Gross CO}_2 = M_{\text{dry}} \times C_{\text{org}} \times F_{\text{perm}} \times \frac{44}{12}$$
+   $$\text{Net CO}_2 = \text{Gross CO}_2 - E_{\text{process}}$$
+   $$\text{Net Tonnes CO}_2 = \frac{\text{Net CO}_2\text{ (g)}}{1{,}000{,}000}$$
 
 ### 3.5 Metrological Scale Pedigree (`device/device_certificate.json`)
 
@@ -228,7 +229,7 @@ Certifies biogenic origin and sets the mass conservation ceiling:
 
 The secondary profile supports electrical energy telemetry and Scope 2 GHG accounting:
 * **Metric Units:** Integer Watt-hours ($\text{Wh}$).
-* **Dual-Register Invariant:** $\Delta \text{cumulative\_wh} == \text{interval\_wh}$.
+* **Dual-Register Invariant:** `Δ cumulative_wh == interval_wh`.
 * **Metrology:** EU Measuring Instruments Directive (MID 2014/32/EU Class B, EN 50470-3).
 * **Reference Factor:** Pinned grid emission factors from authoritative databases (ISPRA / EEA).
 * **Recomputation:** $\text{Total } \text{kg CO}_2\text{e} = (\text{Total Wh} / 1000) \times \text{Factor}$.
@@ -245,7 +246,7 @@ The offline verifier CLI (`verify_bundle.py`) operates fail-closed, automaticall
 | **2** | **Device Certificate & Metrology** | Verifies Producer Root signature on device cert. Binds `device/public_key.pem` to certificate body and re-derives `device_id`. Validates ATECC608 silicon attestation key hash binding (simulator stubs emit audit warnings by default, or fail verification if `--require-hardware-attestation` is passed). Asserts EU 2014/31/EU NAWI (Class I/II/III) scale & thermocouple metrology validity window ($valid\_from < valid\_until$). | Verifies Company Root signature on device cert. Binds `device/public_key.pem` to certificate body. Validates ATECC608 attestation key hash (simulator stubs emit audit warnings by default, or fail verification if `--require-hardware-attestation` is passed). Asserts EU MID 2014/32/EU (Class A/B/C) calibration validity window. |
 | **3** | **Observation Signatures & Metrology** | Verifies ECDSA P-256 signatures for every batch against certified device key. Dynamically checks observation timestamps fall within certificate window AND scale/thermocouple calibration validity ($timestamp\_end \le calibration\_valid\_until$). | Verifies ECDSA P-256 signatures for every interval reading against certified device key. Checks timestamps fall within certificate validity window AND meter calibration validity ($timestamp \le calibration\_valid\_until$). |
 | **4** | **Hash-Chain Continuity** | Verifies unbroken sequential `prev_hash` across all batch records without head, middle, or tail truncation. Enforces strictly incrementing sequence (+1), unique batch IDs, and monotonic timestamps. | Verifies unbroken sequential `prev_hash` across all interval records without head, middle, or tail truncation. Enforces sequence increment (+1). |
-| **5** | **Physical Process Integrity** | Asserts all batches maintain continuous certified pyrolysis temperature ($T_{\min} \ge 500^\circ\text{C}$). Rejects kiln flame-outs. | Asserts strictly monotonic sequences and dual-register delta match ($\Delta \text{cumulative\_wh} == \text{interval\_wh}$). |
+| **5** | **Physical Process Integrity** | Asserts all batches maintain continuous certified pyrolysis temperature ($T_{\min} \ge 500^\circ\text{C}$). Rejects kiln flame-outs. | Asserts strictly monotonic sequences and dual-register delta match (`Δ cumulative_wh == interval_wh`). |
 | **6** | **Claim Boundary Bounding & Ledger** | Confirms batch observations match declared `first_sequence`, `last_sequence`, `batch_count`, and `terminal_hash`. If `--claim-ledger` is provided, enforces cross-claim deduplication (re-used batch IDs or terminal hash in another claim fail closed). | Confirms interval observations match declared period boundaries (`first_sequence`, `last_sequence`, `record_count`, `start_timestamp`, `end_timestamp`, `terminal_hash`). Enforces cross-claim deduplication via `--claim-ledger`. |
 | **7** | **Transformation Lineage** | Validates W3C PROV-O graph entity digests. Validates recipes in `transformations/`. | Validates W3C PROV-O graph entity digests. Validates recipes in `transformations/`. |
 | **8** | **Authoritative Reference Data** | Validates ISO 17025 accredited laboratory report SHA-256 digest and feedstock delivery note digest against pinned registry. | Validates grid emission factor CSV digest against pinned registry (`trusted_references.json`). Asserts all row factors match pinned value. |

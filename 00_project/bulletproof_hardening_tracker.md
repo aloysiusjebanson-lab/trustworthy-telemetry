@@ -23,7 +23,7 @@ This tracker outlines the end-to-end plan to elevate the Verifiable Telemetry pi
   - Documented the **3-Layer Security Hierarchy** (Hardware Attestation -> Bundle Seal -> did:web/eIDAS).
   - Formalized **Hash-Chained Observations** (`prev_hash`).
   - Formalized **Integer Watt-Hour (Wh) Standard** to eliminate float rounding across systems.
-  - Formalized **Meter Register Consistency** ($\Delta \text{cumulative\_wh} == \text{interval\_wh}$).
+  - Formalized **Meter Register Consistency** (`Δ cumulative_wh == interval_wh`).
   - Formalized **Auditor-Pinned Reference Data** (`trusted_references.json`).
   - Formalized **Metrological Pedigree Binding** (EU MID Directive 2014/32/EU Class B, calibration hash, validity window).
   - Defined the **10-Check Verifier Standard**.
@@ -35,7 +35,7 @@ This tracker outlines the end-to-end plan to elevate the Verifiable Telemetry pi
   - Pinned ISPRA 2026 dataset SHA-256 hash (`8e6cc7a7359fb935c5bdf236bd193fa996dfb990a40873f719f99ae5d5f69442`) and factor `0.2750`.
 - [x] **Task 2.2: Hardened Verifier Engine (`src/verifier/verify_bundle.py`)**
   - **S1 (Hash-Chain Continuity):** Verifies `prev_hash` sequential links.
-  - **S2 (Register Difference Validation):** Asserts $\text{cumulative\_wh}[t] - \text{cumulative\_wh}[t-1] == \text{interval\_wh}[t]$.
+  - **S2 (Register Difference Validation):** Asserts `cumulative_wh[t] - cumulative_wh[t-1] == interval_wh[t]`.
   - **S3 (Pinned Factor Enforcement):** Rejects unpinned factor hashes even with valid company root signatures.
   - **S4 (Path Traversal & Unmanifested Files):** Rejects path traversal and unexpected unmanifested files.
   - **S5 (Algorithm Whitelisting):** Enforces `ECDSA_P256_SHA256` only.
