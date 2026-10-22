@@ -64,7 +64,7 @@ These decisions determine how several items below are resolved.
 | B9 | Physical inputs remain open (§2.9): moisture, lab-sample selection, what goes on the scale | 🟡 | Text | ✅ | Threat model §4, Field 8 #6 |
 | B10 | Rewrite the "collusion-forcing" argument once B1–B3 are done | 🔴 | Text | ✅ | Rewritten in threat model §6, README §5, Field 7 closing paragraph, naming the two open gaps (signing oracle, clock) |
 | B11 | **New (found Oct 22): the secure element is a signing oracle for the insider.** A genuine ATECC608B proves the key can't be extracted, not that the gateway firmware only signs real sensor readings. An operator with physical access can feed it fabricated readings | 🔴 | Text (+M2 scope) | ✅ | Stated in threat model §2/§5, spec §7, README §5, Field 7 + Field 8 #1; M2 adds firmware evidence |
-| B12 | **New: old spec/docs claimed checks that were never implemented** (¹⁴C ≥ 95%, heavy metals, TPM 2.0 attestation, `--require-hardware-attestation`) | 🔴 | Text | 🔵 | Done: spec, README, 03_system/README, threat model, application draft. Still stale (internal logs): 00_project/status.md, roadmap.md, security_fix_tracker.md |
+| B12 | **New: old spec/docs claimed checks that were never implemented** (¹⁴C ≥ 95%, heavy metals, TPM 2.0 attestation, `--require-hardware-attestation`) | 🔴 | Text | ✅ | All docs aligned: spec, README, 03_system/*, application draft, status.md, roadmap.md, attack_registry.csv (46 rows), experiment_plan.md; security_fix_tracker.md marked closed/historical |
 
 ## C. Restack Fit & Standards (Review §1, §4)
 
@@ -118,12 +118,12 @@ These decisions determine how several items below are resolved.
 |---------|:-----:|:----:|:-----------:|:----:|
 | Decisions | 5 | 5 | 0 | 0 |
 | A. Code vs Claims | 8 | 8 | 0 | 0 |
-| B. Threat Model | 12 | 9 | 3 | 0 |
+| B. Threat Model | 12 | 10 | 2 | 0 |
 | C. Restack Fit | 4 | 3 | 0 | 1 |
 | D. Milestones | 7 | 7 | 0 | 0 |
 | E. Text Edits | 8 | 7 | 1 | 0 |
 | F. Repo Hygiene | 5 | 5 | 0 | 0 |
-| **Total** | **49** | **44** | **4** | **1** |
+| **Total** | **49** | **45** | **3** | **1** |
 
 ## Suggested Order
 
@@ -139,6 +139,7 @@ These decisions determine how several items below are resolved.
 | Oct 22 | — | Tracker created from the review |
 | Oct 22 | D1–D4 | Decisions: manufacturer CA, tlog in scope, 8 months, ATECC608B only |
 | Oct 22 | A4, A8 | Auditor-bound profile + B18 vector. Found that the legacy `tamper_bundle.py` suite is unreliable |
+| Oct 23 | B12 | status, roadmap, attack registry, experiment plan aligned with v1.3; security fix tracker closed as historical |
 | Oct 22 | D6, E7, F2–F4 | Partner services in M3/M4 + Field 9; CI workflow; tracker renamed; drafts ignored/archived |
 | Oct 22 | F5, B, C, D, E | Docs aligned with v1.3 (README, 03_system/README, threat model); application draft rewritten (8 months, RATS/EAT/SCITT/Eichrecht, honest limits). Open: C4 external party, D6 Restack partner services, E5 own-voice rewrite, E7 citations, F2/F3, F4 CI, B12 internal logs |
 | Oct 22 | D5, A1–A3, A5–A8, F1, F4 | Shared core + bundle v1.3, RFC 8785 JCS, integer-only data, manufacturer-CA attestation, max-gap/period mandates, golden vectors refrozen, `make test`. 40/40 vectors, 0/6 PoCs. Spec rewritten to v1.3. New findings B11 (SE signing oracle), B12 (docs claimed unimplemented checks) |

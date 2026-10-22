@@ -1,66 +1,54 @@
-# Experiment Plan
+# Experiment Plan (bundle format v1.3)
 
-**Status:** Draft — freeze at the end of Week 2
+**Status:** Detection experiments implemented and automated (`make test`). Performance and
+hardware measurements are planned (Milestones 2–4).
 
-## Experimental factors
+The authoritative list of attack vectors, with adversary type and expected failing check, is
+[`attack_registry.csv`](attack_registry.csv) (40 vectors + 6 re-audit regressions). Threat
+model: [`03_system/threat_model.md`](../03_system/threat_model.md).
 
-- Baseline: A, B, C
-- Attack family: source, stream/storage, processing, sustainability input/bundle
-- Attack instance: predefined mutation configuration
-- Data source: deterministic synthetic, trace replay, optional physical device
-- Sampling and batch configuration: to be frozen
+## 1. Detection experiments (implemented)
 
-## Attack families
+| Family | Vectors | Suite |
+|---|---|---|
+| Outsider tampering (no keys) | O1–O13, B5 | `src/attacks/outsider_attacks.py`, `biochar_attacks.py` |
+| Insider fraud (producer key + control of the gateway's signing) | I1–I8, B1–B4, B6–B9, B11–B19 | `src/attacks/insider_fraud_suite.py`, `biochar_attacks.py` |
+| Revoked / decommissioned device | O10, B10 | both suites |
+| Re-audit regressions | P1–P6 | `04_experiments/security_reaudit/poc_exploits.py` |
 
-### 1. Source attacks
+**Adversary knowledge.** Insider vectors re-sign records through the device key and re-seal with
+the producer key, modelling an operator who controls the gateway. They test only the controls the
+operator does not hold (manufacturer attestation, pinned references, physical invariants, lineage,
+auditor mandates).
 
-- Modify a reading after origin
-- Replay a valid reading
-- Substitute device identity
+**Detection criterion (machine-readable).** A vector counts as caught only if the verifier exits
+with `verdict == FAILED` **and** the specific `expected_failed_check` in the JSON report is
+`FAILED`. A verifier crash is a test failure, not a catch (`src/attacks/harness.py`).
 
-### 2. Stream and storage attacks
+**False-positive control.** Every suite first asserts that its clean fixture verifies as
+`PASSED`; the golden vectors (`tests/test_golden_vectors.py`) must reproduce their expected
+verdict exactly.
 
-- Delete records
-- Reorder records
-- Alter stored records
+**Determinism.** Each run builds fresh fixtures (new simulated manufacturer PKI, producer and
+device keys) in a temporary directory; vectors are deterministic given those keys.
 
-### 3. Processing attacks
+**Encoding conformance.** `04_experiments/conformance/jcs_vectors.json` (transcribed from RFC
+8785) and the golden bundles are the shared targets for the Python and planned Rust verifiers.
 
-- Change aggregation or cleaning parameters
-- Substitute calculation code
+## 2. Out of scope for digital detection
 
-### 4. Sustainability-input and bundle attacks
+Documented in the threat model, not claimed as detected: fabricated readings signed by a genuine
+gateway, spoofed devices on the RS-485 bus, rescaled meter configuration, manipulation of
+physical inputs or lab sampling, and clock manipulation (until trusted time lands in M3).
 
-- Replace the emission-factor file or metadata
-- Modify the final evidence bundle
+## 3. Planned measurements (not yet run)
 
-Physical relocation is a residual-risk demonstration/discussion, not a digitally detectable attack target.
+- Signing and verification latency; end-to-end verification time per bundle.
+- Bytes per record and per bundle.
+- Sustainable records per second on the reference gateway (CM4 + ATECC608B).
+- The same detection suite run against bundles produced by real hardware (M4).
 
-## Detection definition template
+## 4. Reproducibility
 
-For each attack specify:
-
-- files/records mutated;
-- adversary knowledge;
-- expected baseline behavior;
-- machine-readable detection criterion;
-- false-positive control;
-- number of independent trials or deterministic cases;
-- expected and observed result.
-
-## Metrics
-
-- Detection count/rate by attack and family
-- False acceptance and rejection
-- Signing and verification latency
-- End-to-end verification time
-- Bytes per observation and per claim bundle
-- Storage increase relative to baseline A
-- Sustainable observations per second
-- Duplicate, gap, and reorder reporting
-- Absolute/relative recomputation difference
-
-## Reproducibility
-
-Every run receives an immutable ID, configuration file, software revision, input hashes, environment description, start/end timestamps, and raw output path.
-
+Every result is reproducible from a commit hash: `make test` regenerates all fixtures; CI
+(`.github/workflows/ci.yml`) runs it on Python 3.9 and 3.12 for every push and pull request.

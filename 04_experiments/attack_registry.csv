@@ -1,12 +1,47 @@
-attack_id,family,name,mutation,target,expected_A,expected_B,expected_C,detection_rule,status
-SRC-01,source,reading modification,Change a signed numeric reading,observation,not_detected,detected,detected,signature or integrity check fails,draft
-SRC-02,source,replay,Duplicate a previously valid observation,stream,not_detected,detected_or_flagged,detected_or_flagged,duplicate sequence is reported,draft
-SRC-03,source,identity substitution,Replace declared device identity,identity,not_detected,detected,detected,signature identity policy fails,draft
-STR-01,stream_storage,deletion,Remove selected records,stream,not_detected,partial,detected_or_disclosed,sequence gap or completeness change is reported,draft
-STR-02,stream_storage,reordering,Swap record order,stream,not_detected,detected_or_flagged,detected_or_flagged,nonmonotonic sequence is reported,draft
-STR-03,stream_storage,stored alteration,Modify persisted observation,storage,not_detected,detected,detected,signature or hash fails,draft
-PRO-01,processing,parameter substitution,Change aggregation parameter,transformation,not_detected,not_detected,detected,declared transformation metadata or output hash fails,draft
-PRO-02,processing,code substitution,Replace calculation implementation,transformation,not_detected,not_detected,detected,code identity or output hash fails,draft
-SUS-01,sustainability_input,emission factor substitution,Replace factor file or metadata,reference_data,not_detected,not_detected,detected,reference input hash fails,draft
-SUS-02,sustainability_input,bundle modification,Modify claim or evidence after creation,bundle,not_detected,not_detected,detected,manifest or recomputation fails,draft
-
+attack_id,suite,profile,adversary,name,mutation,expected_failed_check,status
+O1,outsider_attacks.py,energy_submetering,outsider,Falsified meter reading,Edit cumulative_wh in a signed record,check3_observation_signatures,caught (make test)
+O2,outsider_attacks.py,energy_submetering,outsider,Rogue device id in certificate,Edit device_id in device certificate body (no re-sign),check2_device_cert_and_attestation,caught (make test)
+O3,outsider_attacks.py,energy_submetering,outsider,Dropped middle record,Delete record 2,check4_hash_chain_continuity,caught (make test)
+O4,outsider_attacks.py,energy_submetering,outsider,Replayed record,Append a copy of record 1,check4_hash_chain_continuity,caught (make test)
+O5,outsider_attacks.py,energy_submetering,outsider,Foreign device id in record,Edit record device_id,check3_observation_signatures,caught (make test)
+O6,outsider_attacks.py,energy_submetering,outsider,Timestamp outside certificate window,Move timestamp_start to 2020,check3_observation_signatures,caught (make test)
+O7,outsider_attacks.py,energy_submetering,outsider,Manifest re-hash without seal,Edit observations and update manifest hash,check1_manifest_and_seal,caught (make test)
+O8,outsider_attacks.py,energy_submetering,outsider,Path traversal in manifest,Add ../../etc/passwd entry,check1_manifest_and_seal,caught (make test)
+O9,outsider_attacks.py,energy_submetering,outsider,Unmanifested file,Drop a script into the bundle,check1_manifest_and_seal,caught (make test)
+O10,outsider_attacks.py,energy_submetering,outsider (stolen/decommissioned gateway),Revoked gateway,Verify with --revoked <device_id>,check2_device_cert_and_attestation,caught (make test)
+O11,outsider_attacks.py,energy_submetering,outsider,Private key in bundle,Add a PEM private key file,check1_manifest_and_seal,caught (make test)
+O12,outsider_attacks.py,energy_submetering,outsider,Duplicate JSON key,Duplicate interval_wh key in a record line,check3_observation_signatures,caught (make test)
+O13,outsider_attacks.py,energy_submetering,outsider,Float injection,Rewrite interval_wh as 2500.0,check3_observation_signatures,caught (make test)
+I1,insider_fraud_suite.py,energy_submetering,insider (producer key + gateway),Greenwashed emission factor,Repackage with an unpinned factor file and re-seal,check8_pinned_references,caught (make test)
+I2,insider_fraud_suite.py,energy_submetering,insider (producer key + gateway),Interval register shaved,"Lower interval_wh of record 2, re-sign, re-seal",check5_process_continuity,caught (make test)
+I3,insider_fraud_suite.py,energy_submetering,insider (producer key + gateway),Truncation vs mandated count,"Keep 3 of 5 records, re-seal; auditor passes --expected-count 5",check6_claim_boundary_bounds,caught (make test)
+I4,insider_fraud_suite.py,energy_submetering,insider (producer key + gateway),Attestation chain removed,"Delete device/attestation, re-seal",check2_device_cert_and_attestation,caught (make test)
+I5,insider_fraud_suite.py,energy_submetering,insider (producer key + gateway),Spliced record,Record 3 re-signed with a foreign prev_hash,check4_hash_chain_continuity,caught (make test)
+I6,insider_fraud_suite.py,energy_submetering,insider (producer key + gateway),Withheld window,"Drop records 2-3, re-sign and renumber the chain, re-seal",check4_hash_chain_continuity,caught (make test)
+I7,insider_fraud_suite.py,energy_submetering,insider (producer key + gateway),Tail truncation vs mandated period,"Drop last 2 records, re-seal; auditor passes --period-start/--period-end",check6_claim_boundary_bounds,caught (make test)
+I8,insider_fraud_suite.py,energy_submetering,insider (producer key + gateway),Undeclared adjustment recipe,"Add transformations/manual_adjustment.json, re-seal",check7_transformations_and_provenance,caught (make test)
+B1,biochar_attacks.py,biochar_pyrolysis,insider (producer key + gateway),Water spraying,"Wet mass 10 t per batch, re-sign, repackage",check9_independent_recomputation,caught (make test)
+B2,biochar_attacks.py,biochar_pyrolysis,insider (producer key + gateway),Thermal undercooking,"T_min 420 C in batch 3, re-sign, repackage",check5_process_continuity,caught (make test)
+B3,biochar_attacks.py,biochar_pyrolysis,insider (producer key + gateway),Counterfeit lab assay,Repackage with an edited lab report,check8_pinned_references,caught (make test)
+B4,biochar_attacks.py,biochar_pyrolysis,insider (producer key + gateway),Feedstock used > delivered,"15 t feedstock per batch, re-sign, repackage",check9_independent_recomputation,caught (make test)
+B5,biochar_attacks.py,biochar_pyrolysis,outsider,Dropped batch,Delete batch 3,check4_hash_chain_continuity,caught (make test)
+B6,biochar_attacks.py,biochar_pyrolysis,insider (producer key + gateway),Non-NAWI scale,Re-issue device certificate with unregulated scale standard,check2_device_cert_and_attestation,caught (make test)
+B7,biochar_attacks.py,biochar_pyrolysis,insider (producer key + gateway),Attestation of a different chip,Replace attestation with a genuine chain for another key,check2_device_cert_and_attestation,caught (make test)
+B8,biochar_attacks.py,biochar_pyrolysis,insider (producer key + gateway),Uncertified feedstock manifest,Repackage with an edited delivery manifest,check8_pinned_references,caught (make test)
+B9,biochar_attacks.py,biochar_pyrolysis,insider (producer key + gateway),Claim inflation,"Add 5 t to net_co2_removed_g, re-seal manifest",check10_numeric_reconciliation,caught (make test)
+B10,biochar_attacks.py,biochar_pyrolysis,outsider (stolen/decommissioned gateway),Revoked gateway,Verify with --revoked <device_id>,check2_device_cert_and_attestation,caught (make test)
+B11,biochar_attacks.py,biochar_pyrolysis,insider (producer key + gateway),Private key sealed into bundle,Add private key file and re-seal,check1_manifest_and_seal,caught (make test)
+B12,biochar_attacks.py,biochar_pyrolysis,insider (producer key + gateway),Rogue software device key,"Swap device key, re-sign records, repackage",check2_device_cert_and_attestation,caught (make test)
+B13,biochar_attacks.py,biochar_pyrolysis,insider (producer key + gateway),Expired calibration,Re-issue certificate with 2025 scale calibration expiry,check3_observation_signatures,caught (make test)
+B14,biochar_attacks.py,biochar_pyrolysis,insider (producer key + gateway),Double counting under new claim id,Repackage same batches as a new claim; ledger holds the original,check6_claim_boundary_bounds,caught (make test)
+B15,biochar_attacks.py,biochar_pyrolysis,insider (producer key + gateway),Batch dry output > its feedstock,"Batch 1 wet mass = 2x feedstock, re-sign",check9_independent_recomputation,caught (make test)
+B16,biochar_attacks.py,biochar_pyrolysis,insider (producer key + gateway),95% dry yield,"Wet mass set for 95% dry yield, re-sign",check9_independent_recomputation,caught (make test)
+B17,biochar_attacks.py,biochar_pyrolysis,insider (producer key + gateway),Forged manufacturer CA chain,"Own CA attests a software key; recertify, re-sign, repackage",check2_device_cert_and_attestation,caught (make test)
+B18,biochar_attacks.py,biochar_pyrolysis,insider (producer key + gateway),Profile substitution,Declare energy_submetering and re-seal; auditor selects biochar_pyrolysis,check0_profile_binding,caught (make test)
+B19,biochar_attacks.py,biochar_pyrolysis,insider (producer key + gateway),Wrong reference type,"Pinned feedstock manifest used as lab assay, re-seal",check8_pinned_references,caught (make test)
+P1,poc_exploits.py,biochar_pyrolysis,outsider,Device private key shipped in bundle,Scan generated bundle for private key files,no key present,caught (make test)
+P2,poc_exploits.py,biochar_pyrolysis,insider (producer key + gateway),Rogue software device key,Fabricated telemetry under a new key,verdict FAILED,caught (make test)
+P3,poc_exploits.py,biochar_pyrolysis,insider (producer key + gateway),Calibration expired before batches,Certificate re-issued with 2025 expiry,verdict FAILED,caught (make test)
+P4,poc_exploits.py,biochar_pyrolysis,insider (producer key + gateway),Re-issue under new claim id,Ledger double-counting check,verdict FAILED,caught (make test)
+P5,poc_exploits.py,biochar_pyrolysis,insider (producer key + gateway),Batch dry output > its feedstock,Per-batch mass balance,verdict FAILED,caught (make test)
+P6,poc_exploits.py,biochar_pyrolysis,insider (producer key + gateway),95% dry yield,Yield cap,verdict FAILED,caught (make test)

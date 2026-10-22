@@ -1,66 +1,65 @@
 # Project Status
 
-**Current Phase:** Phase 3 Complete / Entering Phase 4 — Pre-Submission Review & Polish  
-**Target Program:** NLnet Restack Open Call 1 (Horizon Europe GA No. 101299072)  
-**Submission Target:** November 1, 2026 (16 days remaining / 2-day buffer)  
-**Hard Portal Deadline:** November 3, 2026 — 12:00 CET (18 days remaining)  
-**Protocol Frozen:** Yes (Specification v1.2 — Dual-Profile: Biochar dMRV primary, Energy submetering secondary)  
-**Hardware Root-of-Trust:** Architected (Microchip ATECC608 / TPM 2.0 / TCG DICE; `--require-hardware-attestation` flag active; physical CA chain scheduled for M2/M4)  
-**Grant Target:** €38,000 across 4 milestones over 5 months  
-**Current Date:** October 16, 2026  
+**Current date:** October 23, 2026  
+**Current phase:** Phase 4b — external-review remediation (code and docs done) → final polish and submission  
+**Target program:** NLnet Restack Open Call 1 (Horizon Europe GA No. 101299072)  
+**Submission target:** November 1, 2026 · **Hard deadline:** November 3, 2026, 12:00 CET  
+**Protocol:** Bundle format **v1.3** (`02_protocol/evidence_bundle_spec.md`)  
+**Grant plan:** €38,000 (720 h × €50 + €2,000 hardware) over **8 months**, 4 milestones  
+**Work branch:** `refactor-shared-core-v1.3` (to be merged into `main`)
 
 ---
 
-## Executive Summary of Technical State
+## Technical State
 
-1. **Dual-Profile Verifier Engine (`src/verifier/verify_bundle.py`):**
-   - 10 zero-trust fail-closed verification checks fully implemented and hardened against insider/outsider PoCs (`poc_exploits.py` 0/6 vulnerable).
-   - Zero external pip dependencies; native POSIX OpenSSL 3.x and Python standard library only.
-   - Evaluates both Biochar dMRV (`biochar_bundle/`) and Energy Submetering (`claim_bundle/`).
-   - Enforces public-key-to-certificate binding, derived `device_id`, dynamic scale/meter calibration validity vs. observation timestamps, per-batch mass conservation, 40% max dry yield ceiling, auditor claim ledger double-counting rejection (`--claim-ledger`), and strict hardware attestation enforcement (`--require-hardware-attestation`).
+1. **Verifier** (`src/verifier/`): one shared core (`core.py`: Checks 0–4, 6, 7, 10) plus two
+   profile drivers (`profiles/`: hooks for Checks 5, 8, 9). RFC 8785 canonicalisation restricted to
+   integers; strict parser (no floats, no duplicate keys). Python stdlib + OpenSSL CLI only.
+2. **Attestation:** the device key must chain (X.509) to a manufacturer root CA pinned by the
+   auditor. The repo uses a **simulated** manufacturer PKI labelled `TEST ONLY`; real ATECC608B
+   provisioning is Milestone 2.
+3. **Tests** (`make test`, CI on Python 3.9 / 3.12): 40/40 regression vectors (13 outsider,
+   8 insider, 19 biochar), P1–P6 re-audit regressions 0 vulnerable, JCS + golden-vector unit
+   tests. These are author-written regression tests, not an external evaluation.
+4. **Golden vectors:** `04_experiments/golden_test_vector*/` (bundle + auditor trust inputs +
+   expected verdict), targets for the Rust verifier.
+5. **Known limits (documented):** gateway as a signing oracle (no firmware attestation yet),
+   unauthenticated RS-485 bus, operator-controlled clock, ledger local to one auditor, physical
+   inputs operator-controlled.
 
-2. **Adversarial Benchmark Suite (`src/attacks/`):**
-   - **33 / 33 fraud vectors detected and rejected fail-closed** (via strict `harness.py` & self-contained `fixtures.py` with baseline-PASS assertions):
-     - Biochar dMRV suite (`biochar_attacks.py`): **17/17 caught** (water spraying, cold-kiln undercooking, forged lab assays, quota exhaustion, dropped batches, non-certified scales, software key forgery, uncertified feedstock, claim inflation, revoked gateways, private key leakage, cert-key binding break, expired scale calibration, claim replay double-counting, per-batch mass violation, 95% dry yield violation, and strict attestation stub rejection).
-     - Outsider suite (`outsider_attacks.py`): **11/11 caught** (falsified readings, rogue keys, dropped records, replay attacks, device ID swap, timestamp breach, re-hashed manifest bypass, path traversal, unmanifested files, revoked gateways, private key injection).
-     - Insider corporate suite (`insider_fraud_suite.py`): **5/5 caught** (factor greenwashing, dual-register shaving, period truncation, unattested software keys, telemetry splicing).
+## Application State
 
-3. **Conformance Golden Test Vectors (`04_experiments/`):**
-   - Refrozen immutable test vectors for Biochar (`golden_test_vector_biochar/`) and Energy (`golden_test_vector/`) with zero private keys on disk or in git.
-   - Serves as the cross-language benchmark for Milestone 3 (Rust verifier engine).
+- Draft rewritten after the external review (`00_project/nlnet_restack_application_draft.md`):
+  8-month plan, ATECC608B only, transparency log and RFC 3161 in M3, RATS/EAT/SCITT/Eichrecht
+  framing, NLnet partner audit and packaging review, all fields within limits (counted by script).
+- Remediation tracker: `00_project/review_remediation_tracker.md`.
 
-4. **Grant Application Draft (`00_project/nlnet_restack_application_draft.md`):**
-   - All 8 application fields drafted and audited within character limits.
-   - Reframed under the NLnet "Restack the Internet" mandate: eliminating proprietary cloud dark stacks, replacing them with open-source, local-first hardware roots-of-trust and air-gapped cryptographic verification.
-   - Primary proving ground: high-durability carbon removals under EU CRCF (€110–€180/t).
+## Progress
 
----
+| Item | Status | Notes |
+|---|:---:|---|
+| Phase 1 — Foundation | ✅ | |
+| Phase 2 — Drafting | ✅ | Superseded by the Oct 22 rewrite; AI disclosure (Field 12) pending with Field 10 |
+| Phase 3 — Technical proving | ✅ | Terminal demo (3.5) still optional |
+| Phase 4b — Review remediation | ✅ code & docs | Open: C4 external contact; E5 Field 10 rewrite |
+| Phase 4 — Polish & self-score | 🔵 | Self-score, outside read-through, repo made public |
+| Phase 5 — Submission | ⬜ | Nov 1 |
 
-## Active Milestone Progress
+## Risk Register
 
-| Item | Target | Status | Notes |
-|---|---|:---:|---|
-| Phase 1: Foundation & Git | Oct 4 | ✅ Done | Private GitHub repo synchronized; Apache 2.0 license; README v1.2 |
-| Phase 2: Application Drafting | Oct 12 | 🔵 90% | 8/8 fields drafted within character limits; Task 2.8 (AI disclosure decision) pending |
-| Phase 3: Technical Proving | Oct 19 | 🔵 95% | Hardened verifier, self-contained fixtures, and 33/33 attack suites done; Task 3.5 (terminal demo) pending |
-| Phase 4: Polish & Self-Score | Oct 20–27 | ⬜ Pending | Self-score against NLnet 7.0 rubric; finalize Field 10 personal voice; make repo public before submission |
-| Phase 5: Portal Submission | Nov 1 | ⬜ Pending | Submit on NLnet portal with 2-day buffer before Nov 3 12:00 CET |
-
----
-
-## Risk Register & Mitigations
-
-| Risk | Probability | Severity | Mitigation Strategy |
+| Risk | Probability | Severity | Mitigation |
 |---|:---:|:---:|---|
-| **NLnet Scope Framing Disconnect** | Low | High | Proposal reframed to lead with Open Internet Stack / local-first architecture (eliminating cloud SaaS dark stacks) with biochar and CSRD as high-stakes proving grounds. |
-| **Physical Sensor Spoofing (Analog Boundary)** | Medium | High | Addressed via safe-zone RS-485 tapping, multi-sensor thermal fusion, ISO 17025 accredited laboratory binding, and mass-conservation thermodynamic invariants ($M_{\text{dry}} \le M_{\text{feedstock}}$). |
-| **Portal Submission Glitches / Server Overload** | Medium | Critical | Target submission set to November 1, 2026 (48 hours ahead of the November 3, 12:00 CET hard deadline). |
-| **Dependency / Bitrot Risk** | Zero | High | Architecture enforces zero external pip dependencies; native OpenSSL 3.x ensures 10+ year forward auditability. |
+| Reviewer sees a vertical tool, not infrastructure | Medium | High | Lead with the open format, shared core and standards (RATS, SCITT, RFC 8785); transparency log in scope |
+| Reviewer finds claims the code does not support | Low (after v1.3) | High | Spec, README and threat model describe only implemented checks; limits listed explicitly |
+| Prior art overlap (Eichrecht/OCMF, SCITT, RATS) | Medium | Medium | Field 7 positions the project as the layer joining them, reusing their roles and formats |
+| Feasibility alongside employment | Medium | Medium | 8 months at ~22 h/week; working prototype already exists |
+| Repository still private at submission | Medium | Critical | Make public after merging into `main` |
+| Portal problems | Low | Critical | Submit Nov 1 with a 2-day buffer |
 
----
+## Next Actions
 
-## Next Immediate Actions
-
-1. **Task 2.8:** Decide AI disclosure strategy (Path A vs Path B).
-2. **Task 3.5:** Record 90-second terminal demo screencast (or clean terminal output capture) by October 19.
-3. **Phase 4 (Oct 20–27):** Self-score proposal against NLnet 7.0 evaluation rubric, polish Field 10 in authentic personal voice, and switch GitHub repo visibility from Private to Public prior to portal submission.
+1. Get CI green on GitHub, merge `refactor-shared-core-v1.3` into `main`, push.
+2. Make the repository public.
+3. Rewrite Field 10 in own voice; choose the Field 12 AI disclosure answer.
+4. Outreach for one named external contact (C4).
+5. Self-score against the NLnet criteria; outside read-through; submit Nov 1.

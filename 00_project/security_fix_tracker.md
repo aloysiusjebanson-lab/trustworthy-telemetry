@@ -2,7 +2,14 @@
 
 **Created:** Oct 11, 2026 · **Deadline:** Oct 17, 2026, before Task 3.5 (demo recording) in `nlnet_application_tracker.md`
 **Acceptance test:** `python3 04_experiments/security_reaudit/poc_exploits.py` must print `Result: 0 vulnerable PoC(s)` and exit `0`
-**Current state:** 6 / 6 PoCs VULNERABLE · fresh-clone golden vector FAILS
+**Current state:** ✅ **Closed.** 0 / 6 PoCs vulnerable (v1.2, Oct 11) and still 0 / 6 after the port to bundle format v1.3 (Oct 22).
+
+> **Historical record.** This tracker documents the Oct 10–16 re-audit of the **v1.2** verifier.
+> Function names and line numbers below (`verify_biochar_bundle()`, `hardware_attestation.json`,
+> `--require-hardware-attestation`, root-level `biochar_bundle/`) refer to code that was replaced
+> on Oct 22 by the shared core (`src/verifier/core.py`) and bundle format v1.3. The P1–P6
+> regressions were ported to self-contained fixtures and still run in `make test`. Current
+> remediation work: `review_remediation_tracker.md`.
 
 ---
 
@@ -405,3 +412,4 @@ Update these files so nothing claims more than the code does:
 | 2026-10-11 | Phase D (D1-D3) | Strict test harness created (`src/attacks/harness.py`: baseline-PASS assertion, exact check matching, verifier crashes counted as test failures); self-contained fixtures created (`src/attacks/fixtures.py`, `mock_edge.py` parameterized, reference data tracked under `04_experiments/reference_data/`); attack suites refactored: `biochar_attacks.py` 16/16 vectors (added B11-B16), `outsider_attacks.py` 11/11 vectors (added O11), `insider_fraud_suite.py` 5/5 vectors. All 32 attack vectors caught. |
 | 2026-10-11 | Phase E (E1-E3) | Refroze both golden vectors (`04_experiments/golden_test_vector_biochar/` and `04_experiments/golden_test_vector/`) with regenerated `expected_audit_verdict.json`; verified zero private keys in `04_experiments/`; updated README.md (32 vectors, B11-B16, O11, ledger, 40% dry yield bound), threat_model.md (resolved P1-P6 and residual risks), evidence_bundle_spec.md (hardened 10-check standard), security_hardening_tracker.md, and nlnet_application_tracker.md. Fresh-clone end-to-end verification passed (`FRESH CLONE: ALL GREEN`). |
 | 2026-10-16 | Post-Audit Follow-up | Independent verification confirmed all Phases A-E green; qualified Adversary B attestation limitation in `03_system/threat_model.md`; added `--require-hardware-attestation` CLI flag to `src/verifier/verify_bundle.py` to fail closed on `SIMULATED_STUB`; added Attack Vector B17 to `src/attacks/biochar_attacks.py` (33/33 total vectors caught). |
+| 2026-10-22 | Port to v1.3 | Verifier replaced by shared core + profiles (bundle v1.3); `poc_exploits.py` rewritten on self-contained fixtures (no repo-root keys or bundles); P1–P6 still 0 vulnerable; `--require-hardware-attestation` superseded by mandatory X.509 chain validation against `--manufacturer-ca`; regression suite now 40 vectors. See `review_remediation_tracker.md`. |
