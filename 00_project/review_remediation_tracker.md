@@ -53,52 +53,52 @@ These decisions determine how several items below are resolved.
 
 | # | Item | Pri | Type | Status | Notes |
 |---|------|-----|------|--------|-------|
-| B1 | Producer-root-key insider forgery (§2.1): the trust anchor for the device must be the manufacturer, not the operator | 🔴 | Code + Text | 🔵 | Code done (A1). Text pending: Field 8 + `03_system/threat_model.md` |
-| B2 | Operator-controlled clock (§2.2): add external time evidence (RFC 3161 TSA token on chain heads, verifiable offline with `openssl ts -verify`, and/or log anchoring) | 🔴 | Code + Text | ⬜ | Minimum for submission: prototype TSA verification or an explicit M2/M3 deliverable |
-| B3 | Withholding / truncation (§2.3): signed heartbeats + a maximum time-gap rule in the core; logged chain heads | 🔴 | Code + Text | 🔵 | Code done Oct 22: core Check 4 enforces registry `max_record_gap_s`; Check 6 adds `--period-start/--period-end` mandates. Vectors **I6** withheld window (re-signed + renumbered), **I7** tail truncation. Pending: idle heartbeats, tlog anchoring (D2), text |
-| B4 | Unauthenticated RS-485 bus (§2.4): document meter impersonation and CT/VT ratio rewrites; capture the meter's config and event-log registers in the signed record | 🟡 | Text (+Code) | ⬜ | Remove "ahead of the PLC"; state the physical controls (seals, MID seal records) |
-| B5 | 2.5 kV isolation and temperature limits presented as security (§2.5): demote to electrical-safety notes | 🟡 | Text | ⬜ | Mentioned in Fields 4, 6, 7 and 8 |
-| B6 | Dual-register check strength (§2.6): state whether both registers come from the meter independently | 🟡 | Text | 🔵 | Answer: both registers pass through the gateway. Vector I2 is caught only because the insider shaved one register; shaving both consistently passes Check 5. State this; mitigation = auditor reads the meter's own totaliser at period start/end. Spec §4 already says so |
-| B7 | Physical attacks on the ATECC608 (§2.7): state the cost, the evidence left, tamper seals and revocation | 🟡 | Text | ⬜ | `threat_model.md` + one sentence in Field 8 |
-| B8 | Claim ledger works only within one auditor (§2.8) | 🟡 | Text | ⬜ | Solved by D2 or stated as a limitation |
-| B9 | Physical inputs remain open (§2.9): moisture, lab-sample selection, what goes on the scale | 🟡 | Text | ⬜ | State it honestly; frame the mass-balance checks as limits on crude inflation only |
-| B10 | Rewrite the "collusion-forcing" argument once B1–B3 are done | 🔴 | Text | ⬜ | Field 7 closing paragraph + threat model |
-| B11 | **New (found Oct 22): the secure element is a signing oracle for the insider.** A genuine ATECC608B proves the key can't be extracted, not that the gateway firmware only signs real sensor readings. An operator with physical access can feed it fabricated readings | 🔴 | Text (+M2 scope) | ⬜ | Attack suites now model this explicitly (insider vectors re-sign through the SE). Must be stated in Field 8 + threat model; mitigations: measured/secure boot + firmware attestation, gateway provisioned and tamper-sealed by an independent party, physical invariants. Spec §7 states it |
-| B12 | **New: old spec/docs claimed checks that were never implemented** (¹⁴C ≥ 95%, heavy metals, TPM 2.0 attestation, `--require-hardware-attestation`) | 🔴 | Text | 🔵 | Spec rewritten to v1.3 (only implemented checks + §7 "Not yet implemented"). Still to sweep: README, `03_system/*`, application draft, `attack_registry.csv` |
+| B1 | Producer-root-key insider forgery (§2.1): the trust anchor for the device must be the manufacturer, not the operator | 🔴 | Code + Text | ✅ | Code (A1) + text: threat model §2, Field 8 #1 |
+| B2 | Operator-controlled clock (§2.2): add external time evidence (RFC 3161 TSA token on chain heads, verifiable offline with `openssl ts -verify`, and/or log anchoring) | 🔴 | Code + Text | 🔵 | Text done (threat model §5, spec §7, Field 8 #3, M3 scope). Code (RFC 3161) is M3 work |
+| B3 | Withholding / truncation (§2.3): signed heartbeats + a maximum time-gap rule in the core; logged chain heads | 🔴 | Code + Text | 🔵 | Code: max gap + period mandates (I6, I7). Text: Field 8 #3, threat model §5. Heartbeats + tlog are M2/M3 deliverables |
+| B4 | Unauthenticated RS-485 bus (§2.4): document meter impersonation and CT/VT ratio rewrites; capture the meter's config and event-log registers in the signed record | 🟡 | Text (+Code) | ✅ | Threat model §4, Field 8 #2; 'ahead of the PLC' removed everywhere; config/event-log registers in M2 |
+| B5 | 2.5 kV isolation and temperature limits presented as security (§2.5): demote to electrical-safety notes | 🟡 | Text | ✅ | Removed as a security claim; threat model §4 calls isolation an electrical-safety measure |
+| B6 | Dual-register check strength (§2.6): state whether both registers come from the meter independently | 🟡 | Text | ✅ | Spec §4, threat model §4: both registers via gateway; independent value = auditor reading the meter totaliser |
+| B7 | Physical attacks on the ATECC608 (§2.7): state the cost, the evidence left, tamper seals and revocation | 🟡 | Text | ✅ | Threat model §4 (fault injection, sealing, revocation) |
+| B8 | Claim ledger works only within one auditor (§2.8) | 🟡 | Text | ✅ | Threat model §5; tlog cross-auditor detection in M3 and Field 8 #3 |
+| B9 | Physical inputs remain open (§2.9): moisture, lab-sample selection, what goes on the scale | 🟡 | Text | ✅ | Threat model §4, Field 8 #6 |
+| B10 | Rewrite the "collusion-forcing" argument once B1–B3 are done | 🔴 | Text | ✅ | Rewritten in threat model §6, README §5, Field 7 closing paragraph, naming the two open gaps (signing oracle, clock) |
+| B11 | **New (found Oct 22): the secure element is a signing oracle for the insider.** A genuine ATECC608B proves the key can't be extracted, not that the gateway firmware only signs real sensor readings. An operator with physical access can feed it fabricated readings | 🔴 | Text (+M2 scope) | ✅ | Stated in threat model §2/§5, spec §7, README §5, Field 7 + Field 8 #1; M2 adds firmware evidence |
+| B12 | **New: old spec/docs claimed checks that were never implemented** (¹⁴C ≥ 95%, heavy metals, TPM 2.0 attestation, `--require-hardware-attestation`) | 🔴 | Text | 🔵 | Done: spec, README, 03_system/README, threat model, application draft. Still stale (internal logs): 00_project/status.md, roadmap.md, security_fix_tracker.md |
 
 ## C. Restack Fit & Standards (Review §1, §4)
 
 | # | Item | Pri | Type | Status | Notes |
 |---|------|-----|------|--------|-------|
-| C1 | Add standards alignment: RATS (RFC 9334) roles, EAT (RFC 9711), SCITT-compatible signed statements, COSE/JOSE choice explained | 🔴 | Text | ⬜ | Fields 4, 7, 8, 9 |
-| C2 | Add prior art to Field 7: Eichrecht/OCMF + S.A.F.E. Transparenzsoftware, smart-meter gateway, SCITT/RATS, Sigstore/in-toto; cut Web3 to 2 sentences | 🔴 | Text | ⬜ | Paste-ready text is in the review §5. Also check `draft-elkhatabi-verifiable-telemetry-ledgers` (Oct 9 log): cite it or explain how we differ |
-| C3 | Reduce regulatory detail; weight the text toward open standards and reuse | 🟡 | Text | ⬜ | |
+| C1 | Add standards alignment: RATS (RFC 9334) roles, EAT (RFC 9711), SCITT-compatible signed statements, COSE/JOSE choice explained | 🔴 | Text | ✅ | Fields 4, 6 (M1), 7, 9 |
+| C2 | Add prior art to Field 7: Eichrecht/OCMF + S.A.F.E. Transparenzsoftware, smart-meter gateway, SCITT/RATS, Sigstore/in-toto; cut Web3 to 2 sentences | 🔴 | Text | ✅ | Field 7 #1 (Eichrecht/OCMF/S.A.F.E., SMGW, RATS/EAT, SCITT, Sigstore/in-toto/C2PA); Web3 cut to 2 sentences; vendors no longer called 'dark stacks'. The IETF draft from the Oct 9 log was not cited (could not verify it) |
+| C3 | Reduce regulatory detail; weight the text toward open standards and reuse | 🟡 | Text | ✅ | Regulation now a supporting sentence in Field 9; Fields 4/8 lead with mechanisms and standards |
 | C4 | Get one named external party (CAB, Eclipse / LF Energy contact, OEM) | 🟡 | Decision | ⬜ | User outreach; even an email reply counts |
 
 ## D. Milestones & Budget (Review §3)
 
 | # | Item | Pri | Type | Status | Notes |
 |---|------|-----|------|--------|-------|
-| D1 | Realistic schedule (hours/week vs. day job) | 🔴 | Text | ⬜ | D3 → 8 months |
-| D2 | State availability and IP position | 🟡 | Text | ⬜ | Decision D5 answered: no employer IP claim or conflict. Still to write: availability (~22 h/week over 8 months) |
-| D3 | Reduce M2 scope to one secure element + an interface | 🔴 | Text | ⬜ | D4 → ATECC608B only |
-| D4 | Move the shared-core refactor out of M3 (done before submission via A3, or in M1) | 🟡 | Text | ⬜ | Refactor already done (A3); remove it from the M3 text |
-| D5 | Measurable deliverables per milestone (spec tag, N vectors passing in CI for Python and Rust, crates.io, audit) | 🔴 | Text | ⬜ | Field 6 |
-| D6 | Check whether Restack offers NGI-style partner services (security audit, packaging); mention them if it does | 🟡 | Text | ⬜ | Check the Restack call page |
-| D7 | Present the 33 vectors as a regression suite, not as evidence of security | 🟡 | Text | ⬜ | Fields 6, 9, 10 |
+| D1 | Realistic schedule (hours/week vs. day job) | 🔴 | Text | ✅ | Field 6: 8 months, ~22 h/week; milestones M1 M1–2, M2 M2–4, M3 M4–6, M4 M7–8 |
+| D2 | State availability and IP position | 🟡 | Text | ✅ | Field 10 last paragraph: independent work, no employer IP claim, ~22 h/week |
+| D3 | Reduce M2 scope to one secure element + an interface | 🔴 | Text | ✅ | Field 6 M2: ATECC608B only, TPM 2.0/DICE as documented interface |
+| D4 | Move the shared-core refactor out of M3 (done before submission via A3, or in M1) | 🟡 | Text | ✅ | Refactor no longer in M3; M3 = Rust verifier + RFC 3161 + tlog |
+| D5 | Measurable deliverables per milestone (spec tag, N vectors passing in CI for Python and Rust, crates.io, audit) | 🔴 | Text | ✅ | Each milestone lists checkable deliverables (tagged spec, public CI, crate, hardware bundles verifying against vendor root, 100% conformance) |
+| D6 | Check whether Restack offers NGI-style partner services (security audit, packaging); mention them if it does | 🟡 | Text | 🔵 | Field 9 asks for partner support 'where available'. Still to check whether Restack offers it |
+| D7 | Present the 33 vectors as a regression suite, not as evidence of security | 🟡 | Text | ✅ | README §7, threat model §3 and Field 10 call it an author-written regression suite |
 
 ## E. Proposal Text Edits (Review §5)
 
 | # | Field | Item | Status | Notes |
 |---|-------|------|--------|-------|
-| E1 | 4 Summary | Replace with the revised summary (941 chars); keep or drop the log sentence based on D2 | ⬜ | |
-| E2 | 7 Comparison | New point 4 on prior art (661 chars); shorten Web3; stop calling named vendors "dark stacks" | ⬜ | Linked to C2 |
-| E3 | 8 Challenges | Item 1: describe the hook interface instead of re-listing the checks. Item 2: replace the temperature/ATEX text with honest bus limits | ⬜ | Linked to B4, B5 |
-| E4 | 9 Ecosystem | Fix the CRA claim → "supports CRA secure-by-design obligations" | ⬜ | |
-| E5 | 10 Background | Tone down "mathematically verify", "deterministically catches", "without institutional overhead" | ⬜ | User rewrites in own voice (app tracker 4.3) |
-| E6 | 2 Title | Consider "Open Evidence Format and Hardware Root-of-Trust for Verifiable Sensor Telemetry" | ⬜ | |
-| E7 | All | Verify citations: "Kleppmann et al., ACM e-Energy" and "Delegated Regulation 2026/285" | ⬜ | |
-| E8 | All | Recount every field against its character limit after the edits | ⬜ | |
+| E1 | 4 Summary | Replace with the revised summary (941 chars); keep or drop the log sentence based on D2 | ✅ | Field 4 (952 chars) with tlog sentence |
+| E2 | 7 Comparison | New point 4 on prior art (661 chars); shorten Web3; stop calling named vendors "dark stacks" | ✅ | Field 7 rewritten (2,372 chars) |
+| E3 | 8 Challenges | Item 1: describe the hook interface instead of re-listing the checks. Item 2: replace the temperature/ATEX text with honest bus limits | ✅ | Field 8 #5 describes the hook interface; #2 states bus limits |
+| E4 | 9 Ecosystem | Fix the CRA claim → "supports CRA secure-by-design obligations" | ✅ | 'supports secure-by-design obligations under the EU CRA' |
+| E5 | 10 Background | Tone down "mathematically verify", "deterministically catches", "without institutional overhead" | 🔵 | Overclaims removed in the draft; you still need to rewrite it in your own voice (app tracker 4.3) |
+| E6 | 2 Title | Consider "Open Evidence Format and Hardware Root-of-Trust for Verifiable Sensor Telemetry" | ✅ | Title: 'Open Evidence Format and Hardware Root-of-Trust for Verifiable Sensor Telemetry' (79 chars) |
+| E7 | All | Verify citations: "Kleppmann et al., ACM e-Energy" and "Delegated Regulation 2026/285" | 🔵 | Kleppmann citation and 'Delegated Regulation 2026/285' removed from the application rather than verified. Re-add only once confirmed |
+| E8 | All | Recount every field against its character limit after the edits | ✅ | Counted by script: 79 / 952 / 2,823 / 2,372 / 2,623 / 1,389 / 1,363 / 228 |
 
 ## F. Repo Hygiene (Review §0, last row)
 
@@ -108,22 +108,22 @@ These decisions determine how several items below are resolved.
 | F2 | Keep manuscript drafts (Medium, illuminem) out of the public repo or move them under `docs/` | 🟡 | Repo | ⬜ | |
 | F3 | Rename `bulletproof_hardening_tracker.md` to a neutral name | 🟢 | Repo | ⬜ | |
 | F4 | One-command test entry point (`make test` or `python -m src.attacks.run_all`) and a CI workflow | 🟡 | Repo | 🔵 | Oct 22: `make test` (unit + 3 attack suites + PoC regression). CI workflow still to add |
-| F5 | Make the README match the code exactly (simulated attestation, current limitations) | 🔴 | Repo | ⬜ | Do last, after A and B |
+| F5 | Make the README match the code exactly (simulated attestation, current limitations) | 🔴 | Repo | ✅ | README rewritten for v1.3 (CLI table, simulated CA, honest limits); quickstart commands executed and PASS |
 
 ---
 
 ## Progress Summary
 
-| Section | Items | Done | Remaining |
-|---------|:-----:|:----:|:---------:|
-| Decisions | 5 | 5 | 0 |
-| A. Code vs Claims | 8 | 8 | 0 |
-| B. Threat Model | 12 | 0 (4 in progress) | 12 |
-| C. Restack Fit | 4 | 0 | 4 |
-| D. Milestones | 7 | 0 | 7 |
-| E. Text Edits | 8 | 0 | 8 |
-| F. Repo Hygiene | 5 | 1 (1 in progress) | 4 |
-| **Total** | **49** | **15** | **34** |
+| Section | Items | Done | In progress | Open |
+|---------|:-----:|:----:|:-----------:|:----:|
+| Decisions | 5 | 5 | 0 | 0 |
+| A. Code vs Claims | 8 | 8 | 0 | 0 |
+| B. Threat Model | 12 | 9 | 3 | 0 |
+| C. Restack Fit | 4 | 3 | 0 | 1 |
+| D. Milestones | 7 | 6 | 1 | 0 |
+| E. Text Edits | 8 | 6 | 2 | 0 |
+| F. Repo Hygiene | 5 | 2 | 1 | 2 |
+| **Total** | **49** | **39** | **7** | **3** |
 
 ## Suggested Order
 
@@ -139,4 +139,5 @@ These decisions determine how several items below are resolved.
 | Oct 22 | — | Tracker created from the review |
 | Oct 22 | D1–D4 | Decisions: manufacturer CA, tlog in scope, 8 months, ATECC608B only |
 | Oct 22 | A4, A8 | Auditor-bound profile + B18 vector. Found that the legacy `tamper_bundle.py` suite is unreliable |
+| Oct 22 | F5, B, C, D, E | Docs aligned with v1.3 (README, 03_system/README, threat model); application draft rewritten (8 months, RATS/EAT/SCITT/Eichrecht, honest limits). Open: C4 external party, D6 Restack partner services, E5 own-voice rewrite, E7 citations, F2/F3, F4 CI, B12 internal logs |
 | Oct 22 | D5, A1–A3, A5–A8, F1, F4 | Shared core + bundle v1.3, RFC 8785 JCS, integer-only data, manufacturer-CA attestation, max-gap/period mandates, golden vectors refrozen, `make test`. 40/40 vectors, 0/6 PoCs. Spec rewritten to v1.3. New findings B11 (SE signing oracle), B12 (docs claimed unimplemented checks) |
