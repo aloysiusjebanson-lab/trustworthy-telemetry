@@ -84,7 +84,7 @@ These decisions determine how several items below are resolved.
 | D3 | Reduce M2 scope to one secure element + an interface | 🔴 | Text | ✅ | Field 6 M2: ATECC608B only, TPM 2.0/DICE as documented interface |
 | D4 | Move the shared-core refactor out of M3 (done before submission via A3, or in M1) | 🟡 | Text | ✅ | Refactor no longer in M3; M3 = Rust verifier + RFC 3161 + tlog |
 | D5 | Measurable deliverables per milestone (spec tag, N vectors passing in CI for Python and Rust, crates.io, audit) | 🔴 | Text | ✅ | Each milestone lists checkable deliverables (tagged spec, public CI, crate, hardware bundles verifying against vendor root, 100% conformance) |
-| D6 | Check whether Restack offers NGI-style partner services (security audit, packaging); mention them if it does | 🟡 | Text | 🔵 | Field 9 asks for partner support 'where available'. Still to check whether Restack offers it |
+| D6 | Check whether Restack offers NGI-style partner services (security audit, packaging); mention them if it does | 🟡 | Text | ✅ | User decision Oct 22: Field 6 M3 (security audit via Radically Open Security) and M4 (packaging/reproducibility review), Field 9. Worded 'where offered' because Restack availability is unverified |
 | D7 | Present the 33 vectors as a regression suite, not as evidence of security | 🟡 | Text | ✅ | README §7, threat model §3 and Field 10 call it an author-written regression suite |
 
 ## E. Proposal Text Edits (Review §5)
@@ -95,19 +95,19 @@ These decisions determine how several items below are resolved.
 | E2 | 7 Comparison | New point 4 on prior art (661 chars); shorten Web3; stop calling named vendors "dark stacks" | ✅ | Field 7 rewritten (2,372 chars) |
 | E3 | 8 Challenges | Item 1: describe the hook interface instead of re-listing the checks. Item 2: replace the temperature/ATEX text with honest bus limits | ✅ | Field 8 #5 describes the hook interface; #2 states bus limits |
 | E4 | 9 Ecosystem | Fix the CRA claim → "supports CRA secure-by-design obligations" | ✅ | 'supports secure-by-design obligations under the EU CRA' |
-| E5 | 10 Background | Tone down "mathematically verify", "deterministically catches", "without institutional overhead" | 🔵 | Overclaims removed in the draft; you still need to rewrite it in your own voice (app tracker 4.3) |
+| E5 | 10 Background | Tone down "mathematically verify", "deterministically catches", "without institutional overhead" | 🔵 | User will rewrite Field 10 in own voice and choose the Field 12 AI disclosure before submitting |
 | E6 | 2 Title | Consider "Open Evidence Format and Hardware Root-of-Trust for Verifiable Sensor Telemetry" | ✅ | Title: 'Open Evidence Format and Hardware Root-of-Trust for Verifiable Sensor Telemetry' (79 chars) |
-| E7 | All | Verify citations: "Kleppmann et al., ACM e-Energy" and "Delegated Regulation 2026/285" | 🔵 | Kleppmann citation and 'Delegated Regulation 2026/285' removed from the application rather than verified. Re-add only once confirmed |
-| E8 | All | Recount every field against its character limit after the edits | ✅ | Counted by script: 79 / 952 / 2,823 / 2,372 / 2,623 / 1,389 / 1,363 / 228 |
+| E7 | All | Verify citations: "Kleppmann et al., ACM e-Energy" and "Delegated Regulation 2026/285" | ✅ | User confirmed: unverified citations stay out |
+| E8 | All | Recount every field against its character limit after the edits | ✅ | Counted by script: 79 / 952 / 3,092 / 2,372 / 2,623 / 1,511 / 1,363 / 228 |
 
 ## F. Repo Hygiene (Review §0, last row)
 
 | # | Item | Pri | Type | Status | Notes |
 |---|------|-----|------|--------|-------|
 | F1 | Remove duplicated bundles at the repo root (`claim_bundle/`, `biochar_bundle/`, root `*.pem`); generate them into a git-ignored build directory | 🟡 | Repo | ✅ | Oct 22: root `claim_bundle/`, `biochar_bundle/`, root `*.pem` removed from git; simulators/generators default to git-ignored `build/` |
-| F2 | Keep manuscript drafts (Medium, illuminem) out of the public repo or move them under `docs/` | 🟡 | Repo | ⬜ | |
-| F3 | Rename `bulletproof_hardening_tracker.md` to a neutral name | 🟢 | Repo | ⬜ | |
-| F4 | One-command test entry point (`make test` or `python -m src.attacks.run_all`) and a CI workflow | 🟡 | Repo | 🔵 | Oct 22: `make test` (unit + 3 attack suites + PoC regression). CI workflow still to add |
+| F2 | Keep manuscript drafts (Medium, illuminem) out of the public repo or move them under `docs/` | 🟡 | Repo | ✅ | `07_manuscript/*_draft.*` git-ignored (illuminem drafts stay local); Medium article moved to `07_manuscript/archive/` |
+| F3 | Rename `bulletproof_hardening_tracker.md` to a neutral name | 🟢 | Repo | ✅ | Renamed to `security_hardening_tracker.md`, retitled as a historical v1.1 plan; path references updated |
+| F4 | One-command test entry point (`make test` or `python -m src.attacks.run_all`) and a CI workflow | 🟡 | Repo | ✅ | `make test` + `.github/workflows/ci.yml` (Python 3.9 and 3.12 on ubuntu-latest, push + PR). Verified locally on 3.9 and 3.11; first GitHub run pending push |
 | F5 | Make the README match the code exactly (simulated attestation, current limitations) | 🔴 | Repo | ✅ | README rewritten for v1.3 (CLI table, simulated CA, honest limits); quickstart commands executed and PASS |
 
 ---
@@ -120,10 +120,10 @@ These decisions determine how several items below are resolved.
 | A. Code vs Claims | 8 | 8 | 0 | 0 |
 | B. Threat Model | 12 | 9 | 3 | 0 |
 | C. Restack Fit | 4 | 3 | 0 | 1 |
-| D. Milestones | 7 | 6 | 1 | 0 |
-| E. Text Edits | 8 | 6 | 2 | 0 |
-| F. Repo Hygiene | 5 | 2 | 1 | 2 |
-| **Total** | **49** | **39** | **7** | **3** |
+| D. Milestones | 7 | 7 | 0 | 0 |
+| E. Text Edits | 8 | 7 | 1 | 0 |
+| F. Repo Hygiene | 5 | 5 | 0 | 0 |
+| **Total** | **49** | **44** | **4** | **1** |
 
 ## Suggested Order
 
@@ -139,5 +139,6 @@ These decisions determine how several items below are resolved.
 | Oct 22 | — | Tracker created from the review |
 | Oct 22 | D1–D4 | Decisions: manufacturer CA, tlog in scope, 8 months, ATECC608B only |
 | Oct 22 | A4, A8 | Auditor-bound profile + B18 vector. Found that the legacy `tamper_bundle.py` suite is unreliable |
+| Oct 22 | D6, E7, F2–F4 | Partner services in M3/M4 + Field 9; CI workflow; tracker renamed; drafts ignored/archived |
 | Oct 22 | F5, B, C, D, E | Docs aligned with v1.3 (README, 03_system/README, threat model); application draft rewritten (8 months, RATS/EAT/SCITT/Eichrecht, honest limits). Open: C4 external party, D6 Restack partner services, E5 own-voice rewrite, E7 citations, F2/F3, F4 CI, B12 internal logs |
 | Oct 22 | D5, A1–A3, A5–A8, F1, F4 | Shared core + bundle v1.3, RFC 8785 JCS, integer-only data, manufacturer-CA attestation, max-gap/period mandates, golden vectors refrozen, `make test`. 40/40 vectors, 0/6 PoCs. Spec rewritten to v1.3. New findings B11 (SE signing oracle), B12 (docs claimed unimplemented checks) |

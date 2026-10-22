@@ -73,16 +73,17 @@ M3 – Rust verifier and transparency anchoring (Months 4–6, 220 h, €11,000)
 - Standalone zero-dependency Rust verifier implementing the same checks; must pass every golden and negative vector in CI.
 - Trusted time: RFC 3161 timestamp verification on chain heads.
 - Chain-head anchoring in a witnessed append-only log (C2SP tlog format); offline inclusion-proof verification in both verifiers; cross-auditor double-claim detection.
-Deliverables: Rust crate and binary; log client; both verifiers passing 100% of the conformance suite.
+- Independent security audit of both verifiers and the gateway daemon through NLnet's partner (Radically Open Security), if offered under Restack; findings fixed before release.
+Deliverables: Rust crate and binary; log client; both verifiers passing 100% of the conformance suite; audit findings resolved.
 
 M4 – Hardware testbench, validation and release (Months 7–8, 160 h, €8,000 + €2,000 hardware)
 - Testbench: MID Class B submeter, NAWI weighing indicator, Modbus thermocouple module, gateway with ATECC608B.
 - Run the regression suite against hardware-generated bundles; publish results and known limitations.
-- Wiring and deployment guides, packaging, v1.0 release; present the work to the IETF SCITT WG and LF Energy / Eclipse IoT communities.
+- Packaging and reproducible-build review with NLnet's partners where offered; wiring and deployment guides, v1.0 release; present the work to the IETF SCITT WG and LF Energy / Eclipse IoT communities.
 - Materials: submeter + weighing indicator €600, thermocouple module €400, CM4 gateway + ATECC608B + isolated RS-485 interface €500, enclosures and cabling €500.
 Deliverables: hardware validation report, guides, v1.0 release.
 
-*(Character count: 2,823 / 4,000)*
+*(Character count: 3,092 / 4,000)*
 
 ---
 
@@ -137,9 +138,9 @@ Who uses it.
 - Open edge communities (Eclipse IoT, EdgeX Foundry, LF Energy): a gateway signing component and evidence format for fieldbus devices.
 - Operators and equipment makers (submetering integrators, heat, hydrogen or pyrolysis plant builders): audit-grade evidence without SaaS lock-in.
 
-Dissemination. Specification, schemas, both verifiers, simulators, conformance vectors, regression suite and hardware guides are published under Apache 2.0. A profile is a small module with three documented hooks, so others can add sectors (district heating, electrolysis, water discharge) without touching the core. We would welcome NLnet partner support (security review, packaging) where available.
+Dissemination. Specification, schemas, both verifiers, simulators, conformance vectors, regression suite and hardware guides are published under Apache 2.0. A profile is a small module with three documented hooks, so others can add sectors (district heating, electrolysis, water discharge) without touching the core. We will take up NLnet's partner services where offered: an independent security audit (Radically Open Security) and a packaging/reproducibility review, so that auditors need not take our own tests on trust.
 
-*(Character count: 1,389 / 2,000)*
+*(Character count: 1,511 / 2,000)*
 
 ---
 

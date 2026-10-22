@@ -1,6 +1,8 @@
-# Bulletproof Hardening & Zero-Trust Roadmap
+# Security Hardening Roadmap (v1.1, historical)
 
-This tracker outlines the end-to-end plan to elevate the Verifiable Telemetry pipeline from a prototype to a cryptographically bulletproof, insider-resilient industrial standard.
+> Historical plan from Oct 4, 2026 (bundle format v1.1). Superseded by bundle format v1.3 and `review_remediation_tracker.md`; kept for the decision record.
+
+This tracker outlined the plan to harden the Verifiable Telemetry prototype against insider fraud.
 
 ---
 

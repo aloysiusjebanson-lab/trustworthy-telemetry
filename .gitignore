@@ -32,3 +32,6 @@ bundle_biochar_*/
 
 # Local build outputs (simulator bundles, keys, PKI)
 build/
+
+# Article drafts stay local (not part of the public engineering repo)
+07_manuscript/*_draft.*
