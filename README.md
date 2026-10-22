@@ -4,6 +4,7 @@
 > hardware-held signing keys at the edge, a self-contained evidence bundle, and an independent
 > verifier with a shared core and pluggable domain profiles.
 
+[![CI](https://github.com/aloysiusjebanson-lab/trustworthy-telemetry/actions/workflows/ci.yml/badge.svg)](https://github.com/aloysiusjebanson-lab/trustworthy-telemetry/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Dependencies](https://img.shields.io/badge/Dependencies-Python_stdlib_%2B_OpenSSL-success.svg)]()
 [![Bundle format](https://img.shields.io/badge/Bundle_format-v1.3-informational.svg)](02_protocol/evidence_bundle_spec.md)
@@ -188,6 +189,9 @@ Regenerate with `python3 src/tools/freeze_golden_vectors.py`.
 make test        # unit tests + all attack suites + P1-P6 regression
 ```
 
+CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs `make test` on Python 3.9 and 3.12
+for every push and pull request.
+
 The attack suites are a **regression suite written by the author**, not an external security
 evaluation. Each vector must fail the specific check it targets; a crash never counts as a catch.
 
@@ -231,6 +235,7 @@ Not implemented yet (also listed in spec §7):
 │   ├── attacks/         # fixtures, harness, insider toolkit, attack suites
 │   └── tools/           # freeze_golden_vectors.py
 ├── tests/               # unit tests (JCS, golden vectors)
+├── .github/workflows/   # CI: make test on Python 3.9 and 3.12
 └── Makefile
 ```
 
