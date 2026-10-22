@@ -1,34 +1,33 @@
 {
-  "verdict": "PASSED",
   "profile": "biochar_pyrolysis",
-  "bundle": "04_experiments/golden_test_vector_biochar/biochar_bundle",
-  "trust_anchor": "04_experiments/golden_test_vector_biochar/producer_root_public_key.pem",
+  "bundle_format": "1.3",
+  "verdict": "PASSED",
   "checks": {
+    "check0_profile_binding": "PASSED",
     "check1_manifest_and_seal": "PASSED",
     "check2_device_cert_and_attestation": "PASSED",
     "check3_observation_signatures": "PASSED",
     "check4_hash_chain_continuity": "PASSED",
-    "check5_thermal_permanence": "PASSED",
+    "check5_process_continuity": "PASSED",
     "check6_claim_boundary_bounds": "PASSED",
     "check7_transformations_and_provenance": "PASSED",
-    "check8_pinned_reference_factor": "PASSED",
+    "check8_pinned_references": "PASSED",
     "check9_independent_recomputation": "PASSED",
     "check10_numeric_reconciliation": "PASSED"
   },
-  "errors": [],
-  "warnings": [
-    "No claim ledger supplied: cross-claim double counting not checked.",
-    "Hardware attestation is a simulator stub; manufacturer certificate chain not verified (Milestone 2)."
-  ],
-  "audit_findings": {
-    "telemetry_origin_status": "Declared origin verified (Physical sensor & hardware attestation stub verified)",
-    "hardware_attestation_mode": "SIMULATED_STUB",
-    "openssl_path": "/opt/homebrew/bin/openssl",
-    "batch_count": 5,
-    "permanence_status": "Permanence conditions verified (T >= 500\u00b0C maintained across all batches)",
-    "mass_balance_status": "Mass-balance verified (Physical conservation bounds satisfied)",
-    "recomputed_dry_biochar_tonnes": 8.5,
-    "recomputed_net_co2_removed_tonnes": 20.523166,
-    "lineage_status": "Calculation lineage verified against pinned ISO 17025 lab report"
-  }
+  "findings": {
+    "device_id": "dev-79bc8344a3dfe874",
+    "hardware_attestation": "SIMULATED_MANUFACTURER_CA",
+    "record_count": 5,
+    "terminal_hash": "1c56401237b4ace982e5f044b7d60afb25b670a4b33653368d283d2ae01443f3",
+    "recomputed_metrics": {
+      "total_feedstock_input_g": 31250000,
+      "total_wet_biochar_g": 10000000,
+      "total_dry_biochar_g": 8500000,
+      "gross_co2_removed_g": 21723166,
+      "process_deductions_co2_g": 1200000,
+      "net_co2_removed_g": 20523166
+    }
+  },
+  "conformance_command": "python3 src/verifier/verify_bundle.py 04_experiments/golden_test_vector_biochar/bundle --profile biochar_pyrolysis --producer-key 04_experiments/golden_test_vector_biochar/trust/producer_root_public_key.pem --manufacturer-ca 04_experiments/golden_test_vector_biochar/trust/manufacturer_root_ca.pem --trusted-registry 04_experiments/golden_test_vector_biochar/trust/registry.json --json"
 }

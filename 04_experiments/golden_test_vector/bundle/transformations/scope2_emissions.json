@@ -1,0 +1,9 @@
+{
+  "transformation_id": "scope2_location_based_v1",
+  "method": "total_emissions_g_co2e = ceil(total_energy_wh * factor_mg_co2e_per_kwh / 1000000)",
+  "rounding": "ceiling to whole grams (never under-report emissions)",
+  "outputs": {
+    "emission_factor_mg_co2e_per_kwh": 275000,
+    "total_emissions_g_co2e": 3438
+  }
+}

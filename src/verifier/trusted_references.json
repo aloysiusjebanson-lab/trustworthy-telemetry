@@ -1,39 +1,32 @@
 {
-  "registry_version": "1.2",
-  "maintained_by": "Independent Environmental Audit Authority",
-  "updated_at": 1773532800,
+  "registry_version": "1.3",
+  "maintained_by": "Example auditor registry for test fixtures (illustrative values, not official datasets)",
+  "updated_at": 1790000000,
   "methodology_parameters": {
-    "biochar_max_dry_yield_bps": 4000,
-    "biochar_min_temp_c": 500,
-    "biochar_process_deduction_g": 1200000
+    "energy_submetering": {
+      "max_record_gap_s": 0
+    },
+    "biochar_pyrolysis": {
+      "max_record_gap_s": 3600,
+      "min_pyrolysis_temp_c": 500,
+      "max_dry_yield_bps": 4000,
+      "max_h_c_org_bps": 7000,
+      "process_deduction_g": 1200000
+    }
   },
   "datasets": {
-    "8e6cc7a7359fb935c5bdf236bd193fa996dfb990a40873f719f99ae5d5f69442": {
-      "dataset_id": "ispra_it_grid_2026",
+    "bd0ca01d804cbe2820a8ecb048c573423f59b7abeb80fec0f2843dbf5cd08e18": {
+      "dataset_id": "it_grid_location_based_2026_example",
       "type": "grid_emission_factor",
-      "publisher": "ISPRA - Istituto Superiore per la Protezione e la Ricerca Ambientale",
-      "publication_year": 2026,
-      "country": "IT",
-      "activity_type": "electricity_grid_mix",
-      "unit": "kWh",
-      "kg_co2e_per_unit": 0.2750,
-      "source_document": "ISPRA National Inventory Report 2026 / Italian Greenhouse Gas Inventory"
+      "factor_mg_co2e_per_kwh": 275000
     },
-    "f3706c09cfe73a4b5ab0a8ef3c6205aedd2d85bc6cd797b12d60a0cdebb26281": {
-      "dataset_id": "example_lab_2026_q3",
-      "type": "iso17025_accredited_lab_report",
-      "lab": "Example Accredited Lab (illustrative)",
-      "accreditation": "DIN EN ISO/IEC 17025:2018",
-      "c_org_bps": 8200,
-      "moisture_bps": 1500,
-      "permanence_factor_bps": 8500
+    "bd6f929f1a717c5d91899d3e6f7bbed5ffd775b2fb80e5d7ba5858c32b0b5774": {
+      "dataset_id": "LAB-2026-10-0042",
+      "type": "iso17025_accredited_lab_report"
     },
-    "b6e8b1049d2041554ba56384e66c55b5b3178cdf2c793ee07075381a9fedf07b": {
+    "640dd8c967d573064bba97241601a6c5abe3b012c380ae51fdb65dc7faeb7742": {
       "dataset_id": "delivery_fsc_wood_2026_09",
-      "type": "feedstock_delivery_manifest",
-      "supplier": "Dolomiti Biomass Cooperative",
-      "ebc_positive_list_code": "EBC-1.1-FOREST",
-      "delivered_mass_total_g": 40000000
+      "type": "feedstock_delivery_manifest"
     }
   }
 }

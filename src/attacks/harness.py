@@ -1,64 +1,72 @@
 #!/usr/bin/env python3
 """
-Zero-Trust Test Harness (v1.3)
-Asserts that test vectors fail for the exact expected reason,
-verifies that baselines pass, and ensures verifier crashes are never counted as passes.
+Zero-Trust Test Harness (bundle format v1.3)
+Asserts that each attack vector fails for the exact expected reason, verifies that
+baselines pass, and never counts a verifier crash as a catch.
 """
 
-import os
-import sys
 import json
+import os
 import subprocess
+import sys
 
-def verify_and_check(bundle_path, root_key, expected_failed_check, extra_args=None, registry=None):
-    """
-    Runs verify_bundle.py on bundle_path using root_key.
-    Returns (caught: bool, detail: str).
-    caught is True ONLY if verdict == "FAILED" and checks[expected_failed_check] == "FAILED".
-    """
-    cmd = [
-        sys.executable, "src/verifier/verify_bundle.py", bundle_path,
-        "--company-key", root_key, "--json"
-    ]
-    if registry:
-        cmd.extend(["--trusted-registry", registry])
-    if extra_args:
-        cmd.extend(extra_args)
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+VERIFIER = os.path.join(PROJECT_ROOT, "src", "verifier", "verify_bundle.py")
 
-    res = subprocess.run(cmd, capture_output=True, text=True)
+
+def verifier_command(bundle_path, fx, extra_args=None):
+    """Auditor invocation: every trust anchor comes from the fixture, never from the bundle."""
+    cmd = [sys.executable, VERIFIER, bundle_path, "--json",
+           "--profile", fx["profile"],
+           "--producer-key", fx["producer_pub"],
+           "--manufacturer-ca", fx["manufacturer_ca"],
+           "--trusted-registry", fx["registry"]]
+    return cmd + list(extra_args or [])
+
+
+def run_verifier(bundle_path, fx, extra_args=None):
+    res = subprocess.run(verifier_command(bundle_path, fx, extra_args), capture_output=True, text=True)
     try:
-        data = json.loads(res.stdout)
-    except Exception:
-        err_tail = res.stderr[-300:] if res.stderr else res.stdout[-300:]
-        return (False, f"HARNESS ERROR: verifier crashed: {err_tail}")
+        return json.loads(res.stdout), None
+    except ValueError:
+        return None, (res.stderr or res.stdout)[-400:]
 
+
+def verify_and_check(bundle_path, fx, expected_failed_check, extra_args=None):
+    """Returns (caught, detail). caught only if verdict == FAILED and the expected check FAILED."""
+    data, crash = run_verifier(bundle_path, fx, extra_args)
+    if data is None:
+        return False, f"HARNESS ERROR: verifier crashed: {crash}"
     verdict = data.get("verdict")
     status = data.get("checks", {}).get(expected_failed_check)
     if verdict == "FAILED" and status == "FAILED":
-        return (True, "OK")
-    return (False, f"expected {expected_failed_check} to FAIL, got verdict={verdict}, check={status}")
+        return True, "OK"
+    return False, (f"expected {expected_failed_check} to FAIL, got verdict={verdict}, check={status}; "
+                   f"errors={data.get('errors')}")
 
-def assert_baseline_passes(bundle_path, root_key, registry=None):
-    """
-    Runs verifier on the clean fixture; if verdict != PASSED, prints error and exits with code 2.
-    """
-    cmd = [
-        sys.executable, "src/verifier/verify_bundle.py", bundle_path,
-        "--company-key", root_key, "--json"
-    ]
-    if registry:
-        cmd.extend(["--trusted-registry", registry])
-    res = subprocess.run(cmd, capture_output=True, text=True)
-    try:
-        data = json.loads(res.stdout)
-        if data.get("verdict") != "PASSED":
-            print(f"[HARNESS BASELINE ERROR] Expected PASSED, got verdict={data.get('verdict')}")
-            print(f"Errors: {json.dumps(data.get('audit_errors', []), indent=2)}")
-            if res.stderr:
-                print(f"Stderr: {res.stderr}")
-            sys.exit(2)
-    except Exception as e:
-        print(f"[HARNESS BASELINE CRASH] Verifier failed to produce JSON: {e}")
-        print(f"Stdout: {res.stdout}")
-        print(f"Stderr: {res.stderr}")
+
+def assert_baseline_passes(bundle_path, fx):
+    data, crash = run_verifier(bundle_path, fx)
+    if data is None or data.get("verdict") != "PASSED":
+        print("[HARNESS BASELINE ERROR] Clean fixture did not PASS")
+        print(json.dumps(data, indent=2) if data else crash)
         sys.exit(2)
+
+
+def report(title, attacks):
+    """Prints results; returns True when every vector was caught."""
+    print("-" * 78)
+    all_caught = True
+    for name, caught, detail in attacks:
+        print(f"  * {name:<62}: {'[CAUGHT]' if caught else '[BYPASSED]'}")
+        if not caught:
+            print(f"    -> {detail}")
+            all_caught = False
+    print("-" * 78)
+    n = len(attacks)
+    if all_caught:
+        print(f"[SUCCESS] {n}/{n} {title} vectors detected and rejected for the expected reason.")
+    else:
+        print(f"[FAIL] {sum(1 for _, c, _ in attacks if not c)}/{n} {title} vectors bypassed.")
+    print("=" * 78)
+    return all_caught

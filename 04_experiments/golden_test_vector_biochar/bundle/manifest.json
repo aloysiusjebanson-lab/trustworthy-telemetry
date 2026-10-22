@@ -1,0 +1,22 @@
+{
+  "manifest_version": "1.3",
+  "profile": "biochar_pyrolysis",
+  "claim_id": "claim_biochar_removal_2026_q4",
+  "files": {
+    "claim.json": "cf1467944edb3952bb9af2f702f463a345ad3d325e379075d68abb9d62b4c2a1",
+    "transformations/crcf_net_removal.json": "04b16bd55b4583f0c49ff8ac0e67b866ee3981b4b6f6ce78aaf0b421903ad94a",
+    "transformations/mass_balance.json": "f34402cfb839ddfb64008d2f8e54db215f16f80e30462bb547e6ba25de034dd5",
+    "provenance/provenance.json": "43d4b121b237340c9fd0d5fe8540ce9b66f22ba4585350cee7f2e11607084ba1",
+    "reference_data/feedstock_manifest.json": "640dd8c967d573064bba97241601a6c5abe3b012c380ae51fdb65dc7faeb7742",
+    "reference_data/lab_analysis.json": "bd6f929f1a717c5d91899d3e6f7bbed5ffd775b2fb80e5d7ba5858c32b0b5774",
+    "device/device_certificate.json": "069073d42a085a3ddacfdfe43920a1eaea24cc5b6641f5d4528d0c5d39c389a4",
+    "device/public_key.pem": "f804731b404348459e981c3f3cd695d3cdc8dfab827689171f88caa7dc79ede9",
+    "device/attestation/se_device_cert.pem": "51ec6cdf7f97e9bf6de9ee34332f63708a4abaaeca7b6e95daa6bab2c0cf5594",
+    "device/attestation/se_signer_ca.pem": "8c960237e17f1a316b7ea70596f25a176faa96b02aea796e6fa32605fdc3b240",
+    "observations/observations.ndjson": "e846cedc4cee10775dc60615b2a5c3c6ad552e8586eb9936c179a6aff5c17ed1"
+  },
+  "seal": {
+    "algorithm": "ECDSA_P256_SHA256",
+    "signature": "3046022100f0967a1af44a53919f7da7bbae7fc5fccfa2f2df2280e451f71360da553998e2022100cac5a05aac1d31c931f9994e7af8f432c08a85c5566418ff4abba310d19c0fd7"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "body": {
+    "device_id": "dev-6aec872ee7ae6c3a",
+    "profile": "energy_submetering",
+    "device_public_key_sha256": "6aec872ee7ae6c3a26e0a804e22d5c9a813968a8bfd0f820a326c0ad68260561",
+    "secure_element": {
+      "part": "ATECC608B (simulated)",
+      "serial": "6AEC872EE7AE6C3A26"
+    },
+    "instruments": [
+      {
+        "role": "energy_meter",
+        "instrument_id": "meter_main_switchgear_01",
+        "model": "Three-phase MID submeter (example)",
+        "serial": "EM-000123",
+        "standard": "MID_2014_32_EU",
+        "accuracy_class": "Class_B_EN50470",
+        "calibration_cert_sha256": "8e6cc7a7359fb935c5bdf236bd193fa996dfb990a40873f719f99ae5d5f69442",
+        "calibration_valid_until": 1893456000
+      }
+    ],
+    "valid_from": 1767225600,
+    "valid_until": 1830297600,
+    "issued_by": "producer_authority_milan"
+  },
+  "algorithm": "ECDSA_P256_SHA256",
+  "signature": "30440220248752f75bcf0198b59c22bc416cbb2971431ba6566bb4c2f59c5da19a375ed802206798b55b5bce9402d5457096aac88bbf36aaa5c332c174bd44df8f4e9db519b5"
+}

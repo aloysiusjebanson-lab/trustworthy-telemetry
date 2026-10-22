@@ -1,0 +1,9 @@
+{
+  "dataset_id": "it_grid_location_based_2026_example",
+  "publisher": "ISPRA (illustrative value for test fixtures, not an official figure)",
+  "country": "IT",
+  "reference_year": 2026,
+  "scope": "Scope 2 location-based electricity",
+  "unit": "mg_co2e_per_kwh",
+  "factor_mg_co2e_per_kwh": 275000
+}

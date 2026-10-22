@@ -1,170 +1,112 @@
 #!/usr/bin/env python3
 """
-Insider Fraud Benchmark Suite (v1.3)
-Zero-Trust vs Dishonest Reporting Enterprise
+Insider Fraud Benchmark — energy_submetering (bundle format v1.3)
 
-Evaluates attacks where the REPORTING ENTERPRISE is the attacker:
-The company holds the Company Root Key, runs the pipeline, can regenerate
-transformations, and can sign a cryptographically valid Bundle Seal.
-
-Demonstrates that Zero-Trust Verifier controls prevent insider fraud:
-  1. Attack I1: Emission Factor Greenwashing (swapping factor + valid reseal).
-  2. Attack I2: Dual-Register Shaving (tampering interval Wh vs cumulative totalizer).
-  3. Attack I3: Head/Tail Truncation vs Audit Mandate (dropping peak hours + valid reseal).
-  4. Attack I4: Software Simulator Impersonation (forging device without hardware attestation).
-  5. Attack I5: Telemetry Splicing (splicing non-consecutive days / broken hash-chain).
+The adversary is the facility operator: holds the producer root key, controls the gateway
+(its secure element signs on request) and re-packages and re-seals the bundle. Signatures and
+seals are therefore valid; each attack must be caught by an independent control.
+  I1  Greenwashed emission factor (not pinned by auditor)       -> Check 8
+  I2  Interval register shaved and re-signed                     -> Check 5 (dual register)
+  I3  Peak records truncated vs auditor-mandated count           -> Check 6
+  I4  Software key, attestation chain removed                    -> Check 2
+  I5  Spliced telemetry (prev_hash rewritten, record re-signed)  -> Check 4
+  I6  Bad window withheld, chain re-signed and renumbered        -> Check 4 (max record gap)
+  I7  Tail truncated vs auditor-mandated reporting period        -> Check 6
+  I8  Undeclared adjustment recipe added to bundle               -> Check 7 (lineage)
 """
 
+import json
 import os
 import shutil
-import json
-import subprocess
 import sys
 import tempfile
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-from src.attacks.harness import verify_and_check, assert_baseline_passes
-from src.attacks.fixtures import build_energy_fixture
-from src.pipeline.claim_generator import generate_claim_bundle
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from fixtures import build_energy_fixture  # noqa: E402
+from harness import assert_baseline_passes, report, verify_and_check  # noqa: E402
+from tamper_tools import (clone, link_hash, read_envelopes, repackage, resign_chain, reseal_only,  # noqa: E402
+                          sign_envelope, write_envelopes)
 
-def clone_bundle(src_bundle, dest_bundle):
-    if os.path.exists(dest_bundle):
-        shutil.rmtree(dest_bundle)
-    shutil.copytree(src_bundle, dest_bundle)
+SPLICE_PREV = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+
+def records_of(bundle):
+    return [e["record"] for e in read_envelopes(bundle)]
+
 
 def run_insider_tests():
-    print("=" * 70)
-    print(" Insider Fraud Benchmark Suite (Programmatic Assertions)")
-    print("=" * 70)
-
+    print("=" * 78)
+    print(" Insider Fraud Benchmark — energy_submetering (bundle v1.3)")
+    print("=" * 78)
     workdir = tempfile.mkdtemp(prefix="insider_fraud_")
     attacks = []
-
     try:
-        # Build clean fixture inside workdir
-        fixture = build_energy_fixture(workdir)
-        clean_bundle = fixture["bundle"]
-        company_pub = fixture["root_pub"]
-        company_priv = fixture["root_priv"]
-        registry = fixture["registry"]
+        fx = build_energy_fixture(workdir)
+        assert_baseline_passes(fx["bundle"], fx)
+        dev = fx["device_priv"]
 
-        # Baseline assertion (must pass before running attacks)
-        assert_baseline_passes(clean_bundle, company_pub, registry=registry)
+        def attack(name, bundle, check, extra=None):
+            attacks.append((name, *verify_and_check(bundle, fx, check, extra)))
 
-        ref_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "04_experiments", "reference_data"))
-        if not os.path.exists(ref_dir):
-            ref_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "05_data", "external"))
+        d = clone(fx, "i1")
+        fake = os.path.join(workdir, "fake_factor.json")
+        with open(fake, "w") as f:
+            json.dump({"dataset_id": "fabricated", "unit": "mg_co2e_per_kwh", "factor_mg_co2e_per_kwh": 50000}, f)
+        repackage(d, fx, reference_file=fake)
+        attack("I1: Greenwashed emission factor + reseal", d, "check8_pinned_references")
 
-        # -------------------------------------------------------------
-        # Attack I1: Emission Factor Greenwashing
-        # Company modifies reference CSV to 0.0500, regenerates and reseals bundle
-        # -------------------------------------------------------------
-        d1 = os.path.join(workdir, "bundle_insider_i1_greenwash")
-        ext1 = os.path.join(workdir, "tmp_ext_i1")
-        os.makedirs(ext1, exist_ok=True)
-        with open(os.path.join(ext1, "emission_factor.csv"), "w") as f:
-            f.write("country,factor_year,activity_type,unit,kg_co2e_per_unit,source\nIT,2026,electricity_grid_mix,kWh,0.0500,Fabricated Fake Factor\n")
-        with open(os.path.join(ext1, "emission_factor_metadata.json"), "w") as f:
-            json.dump({"dataset_name": "Fabricated", "factor_value": 0.0500}, f)
+        d = clone(fx, "i2")
+        recs = records_of(d)
+        recs[1]["payload"]["interval_wh"] = 500
+        resign_chain(d, recs, dev)
+        repackage(d, fx)
+        attack("I2: Interval register shaved + re-signed", d, "check5_process_continuity")
 
-        clone_bundle(clean_bundle, d1)
-        generate_claim_bundle(bundle_root=d1, reference_dir=ext1, company_priv_key_path=company_priv)
+        d = clone(fx, "i3")
+        resign_chain(d, records_of(d)[:3], dev)
+        repackage(d, fx)
+        attack("I3: Truncation vs mandated record count", d, "check6_claim_boundary_bounds", ["--expected-count", "5"])
 
-        c1, det1 = verify_and_check(d1, company_pub, "check8_pinned_reference_factor", registry=registry)
-        attacks.append(("I1: Emission Factor Greenwashing + Reseal", c1, det1))
+        d = clone(fx, "i4")
+        shutil.rmtree(os.path.join(d, "device", "attestation"))
+        repackage(d, fx)
+        attack("I4: Attestation chain removed + reseal", d, "check2_device_cert_and_attestation")
 
-        # -------------------------------------------------------------
-        # Attack I2: Dual-Register Shaving
-        # Company modifies interval_wh in payload to shave carbon, but meter cumulative totalizer disagrees
-        # -------------------------------------------------------------
-        d2 = os.path.join(workdir, "bundle_insider_i2_register_tamper")
-        clone_bundle(clean_bundle, d2)
-        obs_file = os.path.join(d2, "observations", "observations.ndjson")
-        with open(obs_file, "r") as f:
-            lines = f.readlines()
-        if len(lines) >= 2:
-            rec = json.loads(lines[1])
-            rec["payload"]["interval_wh"] = 500
-            lines[1] = json.dumps(rec) + "\n"
-            with open(obs_file, "w") as f:
-                f.writelines(lines)
-        generate_claim_bundle(bundle_root=d2, reference_dir=ref_dir, company_priv_key_path=company_priv)
+        d = clone(fx, "i5")
+        envs, prev = [], "0" * 64
+        for i, rec in enumerate(records_of(d)):
+            # Record 3 is spliced in from another stream: it links to a foreign predecessor.
+            rec = dict(rec, prev_hash=SPLICE_PREV if i == 2 else prev)
+            envs.append(sign_envelope(rec, dev))
+            prev = link_hash(rec)
+        write_envelopes(d, envs)
+        repackage(d, fx)
+        attack("I5: Spliced telemetry (prev_hash rewritten)", d, "check4_hash_chain_continuity")
 
-        c2, det2 = verify_and_check(d2, company_pub, "check5_sequence_and_registers", registry=registry)
-        attacks.append(("I2: Dual-Register Shaving (Meter Cumulative Disagreement)", c2, det2))
+        d = clone(fx, "i6")
+        recs = records_of(d)
+        kept = [recs[0]] + recs[3:]
+        resign_chain(d, kept, dev, renumber=True)
+        repackage(d, fx)
+        attack("I6: Withheld window, chain re-signed + renumbered", d, "check4_hash_chain_continuity")
 
-        # -------------------------------------------------------------
-        # Attack I3: Period Head/Tail Truncation vs Audit Mandate
-        # Company drops peak hours (takes first 3 of 5 readings), regenerates and reseals
-        # -------------------------------------------------------------
-        d3 = os.path.join(workdir, "bundle_insider_i3_truncation")
-        clone_bundle(clean_bundle, d3)
-        obs_file = os.path.join(d3, "observations", "observations.ndjson")
-        with open(obs_file, "r") as f:
-            lines = f.readlines()[:3]
-        with open(obs_file, "w") as f:
-            f.writelines(lines)
-        generate_claim_bundle(bundle_root=d3, reference_dir=ref_dir, company_priv_key_path=company_priv)
+        d = clone(fx, "i7")
+        recs = records_of(d)
+        start, end = recs[0]["timestamp_start"], recs[-1]["timestamp_end"]
+        resign_chain(d, recs[:3], dev)
+        repackage(d, fx)
+        attack("I7: Tail truncated vs mandated period", d, "check6_claim_boundary_bounds",
+               ["--period-start", str(start), "--period-end", str(end)])
 
-        c3, det3 = verify_and_check(d3, company_pub, "check6_claim_boundary_bounds", extra_args=["--expected-count", "5"], registry=registry)
-        attacks.append(("I3: Period Head/Tail Truncation vs Audit Mandate", c3, det3))
-
-        # -------------------------------------------------------------
-        # Attack I4: Software Device without Hardware Attestation
-        # Company provisions a software keypair and signs cert, but has no valid hardware attestation
-        # -------------------------------------------------------------
-        d4 = os.path.join(workdir, "bundle_insider_i4_unattested")
-        clone_bundle(clean_bundle, d4)
-        att_file = os.path.join(d4, "device", "hardware_attestation.json")
-        with open(att_file, "w") as f:
-            json.dump({"attestation_status": "unverified_software_simulator"}, f)
-        generate_claim_bundle(bundle_root=d4, reference_dir=ref_dir, company_priv_key_path=company_priv)
-
-        c4, det4 = verify_and_check(d4, company_pub, "check2_device_cert_and_attestation", registry=registry)
-        attacks.append(("I4: Software Key without Hardware Attestation", c4, det4))
-
-        # -------------------------------------------------------------
-        # Attack I5: Spliced Telemetry / Broken Hash-Chain
-        # Company stitches observations together, breaking the cryptographic prev_hash chain
-        # -------------------------------------------------------------
-        d5 = os.path.join(workdir, "bundle_insider_i5_broken_chain")
-        clone_bundle(clean_bundle, d5)
-        obs_file = os.path.join(d5, "observations", "observations.ndjson")
-        with open(obs_file, "r") as f:
-            lines = f.readlines()
-        if len(lines) >= 3:
-            rec = json.loads(lines[2])
-            rec["prev_hash"] = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-            rec["payload"]["prev_hash"] = rec["prev_hash"]
-            lines[2] = json.dumps(rec) + "\n"
-            with open(obs_file, "w") as f:
-                f.writelines(lines)
-        generate_claim_bundle(bundle_root=d5, reference_dir=ref_dir, company_priv_key_path=company_priv)
-
-        c5, det5 = verify_and_check(d5, company_pub, "check4_hash_chain_continuity", registry=registry)
-        attacks.append(("I5: Telemetry Splicing / Broken Hash-Chain", c5, det5))
-
+        d = clone(fx, "i8")
+        with open(os.path.join(d, "transformations", "manual_adjustment.json"), "w") as f:
+            json.dump({"transformation_id": "manual_adjustment", "outputs": {}}, f)
+        reseal_only(d, fx)
+        attack("I8: Undeclared adjustment recipe (orphan lineage)", d, "check7_transformations_and_provenance")
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
+    return report("insider", attacks)
 
-    print("-" * 70)
-    all_caught = True
-    for name, caught, detail in attacks:
-        status = "[CAUGHT BY VERIFIER]" if caught else "[BYPASSED]"
-        print(f"  * {name:<55} : {status}")
-        if not caught:
-            print(f"    -> Detail: {detail}")
-            all_caught = False
-    print("-" * 70)
-
-    if all_caught:
-        print(f"[SUCCESS] All {len(attacks)}/{len(attacks)} insider fraud attacks detected and rejected.")
-    else:
-        missed = [name for name, caught, _ in attacks if not caught]
-        print(f"[WARN] {len(missed)} insider fraud attack(s) bypassed verification: {', '.join(missed)}")
-    print("=" * 70)
-    return all_caught
 
 if __name__ == "__main__":
-    success = run_insider_tests()
-    sys.exit(0 if success else 1)
+    sys.exit(0 if run_insider_tests() else 1)

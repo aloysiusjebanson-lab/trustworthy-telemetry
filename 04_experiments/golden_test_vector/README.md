@@ -1,36 +1,36 @@
-# Golden Test Vector (v1.3)
+# Golden Conformance Vector — `energy_submetering` (bundle format v1.3)
 
-**Frozen Date:** October 11, 2026  
-**Profile:** `energy_submetering` (v1.3)  
-**Security Level:** Zero private keys contained (`git ls-files | grep -i private` is empty; device private key stored strictly outside bundle)
+Frozen, self-contained reference bundle for cross-implementation conformance (the Milestone 3
+Rust verifier must reproduce `expected_audit_verdict.json` exactly). EU MID energy submeter, 5 × 15-minute interval records, integer Wh dual registers, pinned grid factor (integer mg CO2e/kWh).
 
-This directory contains a frozen, deterministic reference claim bundle designed for cross-language conformance testing.
+Regenerate with `python3 src/tools/freeze_golden_vectors.py`; checked by `tests/test_golden_vectors.py`.
 
-Any secondary verifier implementation (e.g., the Milestone 3 zero-dependency Rust CLI `telemetry-verify` or C/WASM runtimes) must execute against `claim_bundle/` using `company_root_public_key.pem` and reproduce the exact audit results in `expected_audit_verdict.json`.
+## Layout
 
----
+- `bundle/` — sealed evidence bundle (see `02_protocol/evidence_bundle_spec.md`).
+- `trust/` — auditor-side inputs, supplied out-of-band and never read from the bundle:
+  - `producer_root_public_key.pem` — producer root (device certificate + manifest seal).
+  - `manufacturer_root_ca.pem` — **SIMULATED** secure-element manufacturer root CA (TEST ONLY).
+    The device key's X.509 chain in `bundle/device/attestation/` must validate against it.
+  - `registry.json` — pinned reference datasets and methodology parameters.
+- `expected_audit_verdict.json` — expected verdict, per-check results and recomputed integer metrics.
 
-## Contents
+No private keys are included; they are generated in a temporary directory and destroyed.
 
-- `claim_bundle/`: Complete immutable evidence bundle adhering to `02_protocol/evidence_bundle_spec.md` (v1.3).
-  - 5 signed observations in unbroken cryptographic hash-chain (`prev_hash`).
-  - MID 2014/32/EU legal metrology verified (`Class_B_EN50470`, unexpired calibration).
-  - Hardware attestation stub (`SIMULATED_STUB` bound to device public key hash; production Microchip ATECC608 certificate chain verification is Milestone 2 scope).
-  - Dual registers (`cumulative_wh` = 15,432,500 Wh, `interval_wh` = 2,500 Wh).
-  - Total aggregated energy = `12,500 Wh` (12.5 kWh).
-  - Pinned ISPRA 2026 emission factor (`0.2750 kg CO2e/kWh`).
-  - Total Scope 2 emissions = `3.4375 kg CO2e`.
-  - Manifest cryptographically sealed with ECDSA P-256 (`bundle_seal`).
-  - **No private keys included:** Device private key is generated and stored externally.
-- `company_root_public_key.pem`: P-256 public key of the certifying Company Root Authority.
-- `expected_audit_verdict.json`: Expected JSON audit output asserting that all 10 checks PASS.
+## Honest scope
 
----
+The manufacturer CA is a simulation, so the verdict reports `hardware_attestation:
+SIMULATED_MANUFACTURER_CA` and warns that hardware key origin is not established for production.
+With a real ATECC608B, the auditor pins the vendor's root CA instead; the verification code path
+is identical.
 
-## Conformance Command
+## Conformance command
 
 ```bash
-python3 src/verifier/verify_bundle.py 04_experiments/golden_test_vector/claim_bundle \
-  --company-key 04_experiments/golden_test_vector/company_root_public_key.pem \
+python3 src/verifier/verify_bundle.py 04_experiments/golden_test_vector/bundle \
+  --profile energy_submetering \
+  --producer-key 04_experiments/golden_test_vector/trust/producer_root_public_key.pem \
+  --manufacturer-ca 04_experiments/golden_test_vector/trust/manufacturer_root_ca.pem \
+  --trusted-registry 04_experiments/golden_test_vector/trust/registry.json \
   --json
 ```

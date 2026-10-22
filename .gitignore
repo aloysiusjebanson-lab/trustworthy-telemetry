@@ -29,3 +29,6 @@ bundle_biochar_*/
 /observations.ndjson
 *.tmp
 .DS_Store
+
+# Local build outputs (simulator bundles, keys, PKI)
+build/

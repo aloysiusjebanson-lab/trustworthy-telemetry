@@ -1,0 +1,7 @@
+{
+  "transformation_id": "energy_aggregation_v1",
+  "method": "total_energy_wh = sum(record.payload.interval_wh)",
+  "outputs": {
+    "total_energy_wh": 12500
+  }
+}

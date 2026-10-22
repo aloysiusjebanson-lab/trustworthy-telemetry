@@ -1,35 +1,30 @@
 {
+  "profile": "energy_submetering",
+  "bundle_format": "1.3",
   "verdict": "PASSED",
-  "bundle": "04_experiments/golden_test_vector/claim_bundle",
-  "company_trust_anchor": "04_experiments/golden_test_vector/company_root_public_key.pem",
   "checks": {
+    "check0_profile_binding": "PASSED",
     "check1_manifest_and_seal": "PASSED",
     "check2_device_cert_and_attestation": "PASSED",
     "check3_observation_signatures": "PASSED",
     "check4_hash_chain_continuity": "PASSED",
-    "check5_sequence_and_registers": "PASSED",
+    "check5_process_continuity": "PASSED",
     "check6_claim_boundary_bounds": "PASSED",
     "check7_transformations_and_provenance": "PASSED",
-    "check8_pinned_reference_factor": "PASSED",
+    "check8_pinned_references": "PASSED",
     "check9_independent_recomputation": "PASSED",
     "check10_numeric_reconciliation": "PASSED"
   },
-  "errors": [],
-  "warnings": [
-    "No claim ledger supplied: cross-claim double counting not checked.",
-    "Hardware attestation is a simulator stub; manufacturer certificate chain not verified (Milestone 2)."
-  ],
-  "audit_findings": {
-    "observations_status": "Declared origin verified (Physical sensor & hardware attestation stub verified)",
-    "hardware_attestation_mode": "SIMULATED_STUB",
-    "openssl_path": "/opt/homebrew/bin/openssl",
-    "observation_records_count": 5,
-    "hash_chain_status": "Unbroken genesis-to-terminal chain verified",
-    "reference_factor_status": "Provenance verified against auditor pinned registry",
-    "reference_factor_value": 0.275,
-    "recomputed_energy_wh": 12500,
-    "recomputed_energy_kwh": 12.5,
-    "recomputed_carbon_kg_co2e": 3.4375,
-    "lineage_status": "Calculation lineage verified"
-  }
+  "findings": {
+    "device_id": "dev-6aec872ee7ae6c3a",
+    "hardware_attestation": "SIMULATED_MANUFACTURER_CA",
+    "record_count": 5,
+    "terminal_hash": "a05d5a047e058087a0b54fd24656c4102b20cfef01130667bbc23eb2ae9cbdc6",
+    "recomputed_metrics": {
+      "total_energy_wh": 12500,
+      "emission_factor_mg_co2e_per_kwh": 275000,
+      "total_emissions_g_co2e": 3438
+    }
+  },
+  "conformance_command": "python3 src/verifier/verify_bundle.py 04_experiments/golden_test_vector/bundle --profile energy_submetering --producer-key 04_experiments/golden_test_vector/trust/producer_root_public_key.pem --manufacturer-ca 04_experiments/golden_test_vector/trust/manufacturer_root_ca.pem --trusted-registry 04_experiments/golden_test_vector/trust/registry.json --json"
 }

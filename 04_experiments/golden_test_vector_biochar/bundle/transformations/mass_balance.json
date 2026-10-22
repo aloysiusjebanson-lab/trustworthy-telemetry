@@ -1,0 +1,13 @@
+{
+  "transformation_id": "biochar_mass_balance_v1",
+  "method": "dry_g[batch] = floor(wet_g * (10000 - moisture_bps) / 10000); totals summed over batches",
+  "invariants": [
+    "dry_g * 10000 <= feedstock_g * max_dry_yield_bps (per batch)",
+    "sum(feedstock_g) <= delivered_mass_total_g"
+  ],
+  "outputs": {
+    "total_feedstock_input_g": 31250000,
+    "total_wet_biochar_g": 10000000,
+    "total_dry_biochar_g": 8500000
+  }
+}
