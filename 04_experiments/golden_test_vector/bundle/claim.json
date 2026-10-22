@@ -1,0 +1,19 @@
+{
+  "claim_id": "claim_dev-6aec872ee7ae6c3a_1790800000_1790804500",
+  "profile": "energy_submetering",
+  "device_id": "dev-6aec872ee7ae6c3a",
+  "period": {
+    "first_sequence": 1,
+    "last_sequence": 5,
+    "record_count": 5,
+    "start_timestamp": 1790800000,
+    "end_timestamp": 1790804500,
+    "genesis_prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "terminal_hash": "a05d5a047e058087a0b54fd24656c4102b20cfef01130667bbc23eb2ae9cbdc6"
+  },
+  "metrics": {
+    "total_energy_wh": 12500,
+    "emission_factor_mg_co2e_per_kwh": 275000,
+    "total_emissions_g_co2e": 3438
+  }
+}

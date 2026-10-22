@@ -1,8 +1,0 @@
-{
-  "device_id": "device_biochar_b3fb8f235ad2",
-  "device_type": "pyrolysis_dMRV_gateway",
-  "kiln_id": "kiln_rotary_continuous_01",
-  "scale_id": "scale_floor_indicator_01",
-  "thermocouple_id": "tc_kiln_primary_zone_01",
-  "facility": "Biochar Pyrolysis Facility Trentino"
-}

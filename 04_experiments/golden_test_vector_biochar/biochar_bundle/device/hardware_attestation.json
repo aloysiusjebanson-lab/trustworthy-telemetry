@@ -1,8 +1,0 @@
-{
-  "secure_element": "Microchip ATECC608B",
-  "manufacturer_ca": "Microchip Technology Root CA 2026",
-  "device_public_key_sha256": "ea0926b8fb5d9b6c86e905b41d4eb67be00a19b8fdb3e4bbc2f4215117d8dab4",
-  "attestation_status": "SILICON_HARDWARE_VERIFIED",
-  "attestation_mode": "SIMULATED_STUB",
-  "pcr_quote": "c84f1092a83bd782019482710384729104820194820194820194820194820194"
-}

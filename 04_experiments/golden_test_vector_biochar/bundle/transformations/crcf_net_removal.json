@@ -1,0 +1,10 @@
+{
+  "transformation_id": "biochar_crcf_net_removal_v1",
+  "method": "gross_g = floor(dry_g * c_org_bps * permanence_factor_bps * 44 / (10000 * 10000 * 12)); net_g = gross_g - process_deduction_g",
+  "rounding": "floor (never over-credit removals)",
+  "outputs": {
+    "gross_co2_removed_g": 21723166,
+    "process_deductions_co2_g": 1200000,
+    "net_co2_removed_g": 20523166
+  }
+}

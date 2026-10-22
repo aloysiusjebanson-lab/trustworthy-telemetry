@@ -1,0 +1,58 @@
+{
+  "prefix": {
+    "prov": "http://www.w3.org/ns/prov#",
+    "tte": "https://github.com/aloysiusjebanson-lab/trustworthy-telemetry/ns#"
+  },
+  "entity": {
+    "obs": {
+      "tte:path": "observations/observations.ndjson",
+      "tte:sha256": "2f9d51309fc1f7be7b593953c465b63837db703406772139f2c836bb069d23a9"
+    },
+    "factor": {
+      "tte:path": "reference_data/emission_factor.json",
+      "tte:sha256": "bd0ca01d804cbe2820a8ecb048c573423f59b7abeb80fec0f2843dbf5cd08e18"
+    },
+    "recipe_aggregation": {
+      "tte:path": "transformations/energy_aggregation.json",
+      "tte:sha256": "a20d5694f875d86ac852279be91458eeeed13c61a90ba1ce61e0909aa3551571"
+    },
+    "recipe_scope2": {
+      "tte:path": "transformations/scope2_emissions.json",
+      "tte:sha256": "7099e165409922bc08b16b89bb24a6a74e31570d9d3299c1c2666edd30e06148"
+    },
+    "claim": {
+      "tte:path": "claim.json",
+      "tte:sha256": "89e2be267bf97b4be78bf168c609154419617d5676dce0846ad68d75596ccc6b"
+    }
+  },
+  "activity": {
+    "act_energy_aggregation": {
+      "tte:recipe": "recipe_aggregation"
+    },
+    "act_scope2_emissions": {
+      "tte:recipe": "recipe_scope2"
+    }
+  },
+  "used": {
+    "_:act_energy_aggregation_used1": {
+      "prov:activity": "act_energy_aggregation",
+      "prov:entity": "obs"
+    },
+    "_:act_scope2_emissions_used1": {
+      "prov:activity": "act_scope2_emissions",
+      "prov:entity": "factor"
+    }
+  },
+  "wasGeneratedBy": {
+    "_:act_scope2_emissions_gen1": {
+      "prov:entity": "claim",
+      "prov:activity": "act_scope2_emissions"
+    }
+  },
+  "wasInformedBy": {
+    "_:act_scope2_emissions_inf1": {
+      "prov:informed": "act_scope2_emissions",
+      "prov:informant": "act_energy_aggregation"
+    }
+  }
+}

@@ -1,37 +1,36 @@
-# Biochar Golden Test Vector (v1.3)
+# Golden Conformance Vector — `biochar_pyrolysis` (bundle format v1.3)
 
-**Frozen Date:** October 11, 2026  
-**Profile:** `biochar_pyrolysis` (v1.3)  
-**Security Level:** Zero private keys contained (`git ls-files | grep -i private` is empty; device private key stored strictly outside bundle)
+Frozen, self-contained reference bundle for cross-implementation conformance (the Milestone 3
+Rust verifier must reproduce `expected_audit_verdict.json` exactly). EU NAWI weighing indicator + IEC 60584-1 thermocouple module, 5 × 4-hour pyrolysis batches, pinned lab assay and feedstock manifest, integer CRCF stoichiometry.
 
-This directory contains a frozen, deterministic reference evidence bundle for High-Durability Carbon Dioxide Removal (Biochar Pyrolysis dMRV) under EU CRCF Delegated Regulation (EU) 2026/285, Puro.earth, and European Biochar Certificate (EBC) standards.
+Regenerate with `python3 src/tools/freeze_golden_vectors.py`; checked by `tests/test_golden_vectors.py`.
 
-It is designed for cross-language conformance testing. Any secondary verifier implementation (e.g., the Milestone 3 zero-dependency Rust CLI `telemetry-verify` or C/WASM embedded runtimes) must execute against `biochar_bundle/` using `producer_root_public_key.pem` and reproduce the exact audit results in `expected_audit_verdict.json`.
+## Layout
 
----
+- `bundle/` — sealed evidence bundle (see `02_protocol/evidence_bundle_spec.md`).
+- `trust/` — auditor-side inputs, supplied out-of-band and never read from the bundle:
+  - `producer_root_public_key.pem` — producer root (device certificate + manifest seal).
+  - `manufacturer_root_ca.pem` — **SIMULATED** secure-element manufacturer root CA (TEST ONLY).
+    The device key's X.509 chain in `bundle/device/attestation/` must validate against it.
+  - `registry.json` — pinned reference datasets and methodology parameters.
+- `expected_audit_verdict.json` — expected verdict, per-check results and recomputed integer metrics.
 
-## Contents
+No private keys are included; they are generated in a temporary directory and destroyed.
 
-- `biochar_bundle/`: Complete immutable evidence bundle adhering to `02_protocol/evidence_bundle_spec.md` (v1.3, `biochar_pyrolysis` profile).
-  - 5 signed batch telemetry records in an unbroken cryptographic hash-chain (`prev_hash`).
-  - Pyrolysis temperatures verified ($T \ge 500^\circ\text{C}$ across all batches) confirming thermal permanence.
-  - Legal-for-trade scale indicators compliant with EU Directive 2014/31/EU NAWI (Class III) with dynamic calibration validity verification.
-  - Silicon hardware attestation stub (`SIMULATED_STUB` bound to device public key hash; production Microchip ATECC608 certificate chain verification is Milestone 2 scope).
-  - Accredited ISO 17025 laboratory test report ($C_{\text{org}} = 82.00\%$, moisture $= 15.00\%$, permanence factor $= 85.00\%$, bound to batch range).
-  - Certified biomass feedstock manifest (FSC Forestry Residues, 40 metric tonne quota).
-  - Physical mass-balance conservation ($M_{\text{dry}} = 8,500,000\text{ g} \le 31,250,000\text{ g}$ input feedstock; per-batch dry yield $\le 40\%$).
-  - Recomputed net carbon removal: `20,523,166 g` (`20.523166 metric tonnes CO2`).
-  - Manifest cryptographically sealed with Producer Root Key ECDSA P-256 (`bundle_seal`).
-  - **No private keys included:** Device private key is generated and stored externally.
-- `producer_root_public_key.pem`: P-256 public key of the certifying Producer Authority / Trust Anchor.
-- `expected_audit_verdict.json`: Expected JSON audit report asserting that all 10 checks PASS.
+## Honest scope
 
----
+The manufacturer CA is a simulation, so the verdict reports `hardware_attestation:
+SIMULATED_MANUFACTURER_CA` and warns that hardware key origin is not established for production.
+With a real ATECC608B, the auditor pins the vendor's root CA instead; the verification code path
+is identical.
 
-## Conformance Verification Command
+## Conformance command
 
 ```bash
-python3 src/verifier/verify_bundle.py 04_experiments/golden_test_vector_biochar/biochar_bundle \
-  --company-key 04_experiments/golden_test_vector_biochar/producer_root_public_key.pem \
+python3 src/verifier/verify_bundle.py 04_experiments/golden_test_vector_biochar/bundle \
+  --profile biochar_pyrolysis \
+  --producer-key 04_experiments/golden_test_vector_biochar/trust/producer_root_public_key.pem \
+  --manufacturer-ca 04_experiments/golden_test_vector_biochar/trust/manufacturer_root_ca.pem \
+  --trusted-registry 04_experiments/golden_test_vector_biochar/trust/registry.json \
   --json
 ```

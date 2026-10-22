@@ -1,0 +1,8 @@
+{
+  "delivery_ref": "delivery_fsc_wood_2026_09",
+  "supplier": "Example biomass supplier (illustrative fixture)",
+  "biomass_type": "Forestry residues",
+  "positive_list_code": "EBC-1.1-FOREST",
+  "delivered_mass_total_g": 40000000,
+  "delivery_date": "2026-09-28"
+}

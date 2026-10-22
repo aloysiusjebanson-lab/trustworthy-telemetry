@@ -1,0 +1,70 @@
+{
+  "prefix": {
+    "prov": "http://www.w3.org/ns/prov#",
+    "tte": "https://github.com/aloysiusjebanson-lab/trustworthy-telemetry/ns#"
+  },
+  "entity": {
+    "obs": {
+      "tte:path": "observations/observations.ndjson",
+      "tte:sha256": "e846cedc4cee10775dc60615b2a5c3c6ad552e8586eb9936c179a6aff5c17ed1"
+    },
+    "lab": {
+      "tte:path": "reference_data/lab_analysis.json",
+      "tte:sha256": "bd6f929f1a717c5d91899d3e6f7bbed5ffd775b2fb80e5d7ba5858c32b0b5774"
+    },
+    "feedstock": {
+      "tte:path": "reference_data/feedstock_manifest.json",
+      "tte:sha256": "640dd8c967d573064bba97241601a6c5abe3b012c380ae51fdb65dc7faeb7742"
+    },
+    "recipe_mass_balance": {
+      "tte:path": "transformations/mass_balance.json",
+      "tte:sha256": "f34402cfb839ddfb64008d2f8e54db215f16f80e30462bb547e6ba25de034dd5"
+    },
+    "recipe_crcf": {
+      "tte:path": "transformations/crcf_net_removal.json",
+      "tte:sha256": "04b16bd55b4583f0c49ff8ac0e67b866ee3981b4b6f6ce78aaf0b421903ad94a"
+    },
+    "claim": {
+      "tte:path": "claim.json",
+      "tte:sha256": "cf1467944edb3952bb9af2f702f463a345ad3d325e379075d68abb9d62b4c2a1"
+    }
+  },
+  "activity": {
+    "act_mass_balance": {
+      "tte:recipe": "recipe_mass_balance"
+    },
+    "act_crcf_net_removal": {
+      "tte:recipe": "recipe_crcf"
+    }
+  },
+  "used": {
+    "_:act_mass_balance_used1": {
+      "prov:activity": "act_mass_balance",
+      "prov:entity": "obs"
+    },
+    "_:act_mass_balance_used2": {
+      "prov:activity": "act_mass_balance",
+      "prov:entity": "lab"
+    },
+    "_:act_mass_balance_used3": {
+      "prov:activity": "act_mass_balance",
+      "prov:entity": "feedstock"
+    },
+    "_:act_crcf_net_removal_used1": {
+      "prov:activity": "act_crcf_net_removal",
+      "prov:entity": "lab"
+    }
+  },
+  "wasGeneratedBy": {
+    "_:act_crcf_net_removal_gen1": {
+      "prov:entity": "claim",
+      "prov:activity": "act_crcf_net_removal"
+    }
+  },
+  "wasInformedBy": {
+    "_:act_crcf_net_removal_inf1": {
+      "prov:informed": "act_crcf_net_removal",
+      "prov:informant": "act_mass_balance"
+    }
+  }
+}
