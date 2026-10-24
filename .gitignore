@@ -35,3 +35,9 @@ build/
 
 # Article drafts stay local (not part of the public engineering repo)
 07_manuscript/*_draft.*
+
+# Internal application coaching, review notes and work planning (kept local)
+00_project/nlnet_*
+00_project/review_remediation_tracker.md
+00_project/work_split.md
+00_project/decision_register.md

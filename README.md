@@ -223,7 +223,7 @@ Not implemented yet (also listed in spec §7):
 ## 9. Repository Map
 
 ```text
-├── 00_project/          # Roadmap, decisions, NLnet application draft and trackers
+├── 00_project/          # Roadmap, status and security trackers
 ├── 01_literature/       # Literature matrix and gap analysis
 ├── 02_protocol/         # Evidence bundle specification (v1.3)
 ├── 03_system/           # Architecture and threat model
