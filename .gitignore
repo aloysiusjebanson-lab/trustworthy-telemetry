@@ -45,3 +45,7 @@ build/
 # Article drafts and archive (kept local)
 07_manuscript/archive/
 07_manuscript/medium_article.md
+00_project/status.md
+00_project/roadmap.md
+00_project/security_fix_tracker.md
+00_project/security_hardening_tracker.md
