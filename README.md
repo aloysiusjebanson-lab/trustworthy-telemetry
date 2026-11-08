@@ -223,7 +223,6 @@ Not implemented yet (also listed in spec §7):
 ## 9. Repository Map
 
 ```text
-├── 00_project/          # Roadmap, status and security trackers
 ├── 01_literature/       # Literature matrix and gap analysis
 ├── 02_protocol/         # Evidence bundle specification (v1.3)
 ├── 03_system/           # Architecture and threat model
@@ -238,6 +237,10 @@ Not implemented yet (also listed in spec §7):
 ├── .github/workflows/   # CI: make test on Python 3.9 and 3.12
 └── Makefile
 ```
+
+## Use of Generative AI
+
+Development of this repository uses AI coding assistants (Claude and Gemini) for implementation, refactoring, test generation, and documentation under the author's direction. All cryptographic operations rely on standard OpenSSL primitives (no custom or AI-generated cryptography), and every change is gated in CI (`make test`) against RFC 8785 conformance vectors, golden bundles, and the 40-vector adversarial regression suite. Contributions must be understood and verified by their author and remain compatible with the Apache 2.0 license.
 
 ## License
 
